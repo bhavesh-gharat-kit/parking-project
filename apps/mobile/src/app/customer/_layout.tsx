@@ -1,9 +1,10 @@
 /**
  * Customer stack.
  *
- * Phase 03 adds profile and vehicles; Phase 04 adds location → package
- * (context.txt §9). Phases 05-08 add the rest: vehicle + summary → payment →
- * receipt, plus booking history.
+ * Phase 03 adds profile and vehicles; Phase 04 adds the location and package
+ * pickers; Phase 05 completes the §9 flow — location → vehicle → package →
+ * summary — and adds the bookings list the summary is reached from. Phases 06-08
+ * add payment, admin approval and the receipt.
  *
  * The guard bounces a signed-out session back to sign-in. It takes no role: an
  * admin opening a customer screen is not a problem to prevent — they may well
@@ -25,7 +26,10 @@ export default function CustomerLayout() {
       <Stack.Screen name="vehicles/index" options={{ title: 'My Vehicles' }} />
       <Stack.Screen name="vehicles/[id]" options={{ title: 'Vehicle' }} />
       <Stack.Screen name="book/index" options={{ title: 'Choose a Location' }} />
-      <Stack.Screen name="book/[locationId]" options={{ title: 'Choose a Package' }} />
+      <Stack.Screen name="book/[locationId]/index" options={{ title: 'Choose a Vehicle' }} />
+      <Stack.Screen name="book/[locationId]/package" options={{ title: 'Choose a Package' }} />
+      <Stack.Screen name="bookings/index" options={{ title: 'My Bookings' }} />
+      <Stack.Screen name="bookings/[id]" options={{ title: 'Booking Summary' }} />
     </Stack>
   );
 }

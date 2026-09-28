@@ -7,3 +7,5 @@ export * from './profile';
 export * from './vehicles';
 export * from './locations';
 export * from './rates';
+export * from './datetime';
+export * from './bookings';

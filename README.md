@@ -37,6 +37,14 @@ npm run dev:api                           # http://localhost:3000
 openssl rand -base64 32
 ```
 
+`CRON_SECRET` is what the booking-expiry sweep authenticates with
+([Expiry](#expiry-contexttxt-15)). The API boots without it, but the sweep
+answers `503` until it is set, so unfinished bookings never expire:
+
+```bash
+openssl rand -hex 32
+```
+
 ```bash
 curl -s http://localhost:3000/api/health
 ```
@@ -368,6 +376,107 @@ mid-launch-week.
 
 ---
 
+## Bookings
+
+`POST /api/bookings` takes **three ids** — location, vehicle, rate — and nothing
+else. The backend reads `ParkingRate.priceInPaise` and derives `amountInPaise`,
+`startTime` and `endTime` (from the rate's `durationMinutes`) itself, because
+context.txt §32's first line is that the customer never controls the payable
+amount. `BookingCreateRequestSchema` has no amount field at all, so a tampered
+one is dropped by Zod before any handler sees it, and the created booking is
+priced from the rate whatever the request said.
+
+The rate is re-read and re-validated at creation — active, belonging to that
+location, and matching the vehicle's own type — because the `rateId` came from a
+list the app fetched minutes ago and an admin can reprice or retire a rate at any
+time (§24). Its price and label are then **snapshotted onto the booking**, so a
+later price change cannot rewrite what an existing booking cost.
+
+### Two statuses, never one
+
+`Booking.status` and `Payment.status` are separate enums on separate tables and
+neither is derived from the other (context.txt §14, §32). "Can this vehicle
+park?" and "did the money arrive?" are different questions, and a UPI booking is
+routinely settled on one axis while still moving on the other. Both are
+independently queryable: `GET /api/bookings?status=…&paymentStatus=…`.
+
+A booking has no `Payment` row until the customer picks a method (Phase 06),
+because `Payment.method` cannot be null — so `payment: null` on a `PENDING`
+booking is the honest answer, not a missing default.
+
+### The state machine
+
+[`packages/shared/src/bookings.ts`](packages/shared/src/bookings.ts) holds the
+legal transitions as two declarative tables (`BOOKING_TRANSITIONS`,
+`PAYMENT_TRANSITIONS`) with an ASCII diagram of the whole lifecycle above them.
+They live in the shared package, not the API, so the app, the API and the Phase 2
+website check the same rules. Two properties they exist to guarantee:
+
+- **`CONFIRMED` is reachable only from `PAYMENT_VERIFICATION` or
+  `PENDING_APPROVAL`** — that is, only through an admin decision. No customer
+  action and no amount of UTR typing can confirm a booking (§32).
+- **Terminal means terminal.** `REJECTED`, `CANCELLED`, `EXPIRED` and
+  `COMPLETED` have no outgoing moves, and a type-level assertion in that file
+  fails the build if the table and `TERMINAL_BOOKING_STATUSES` ever disagree.
+
+[`apps/api/lib/bookings/transitions.ts`](apps/api/lib/bookings/transitions.ts) is
+the only code that writes either status. It checks the table, writes with a
+conditional `updateMany` guarded on the status it just read (so the expiry sweep
+and a customer submitting a UTR cannot both win), stamps the matching timestamp
+column, and appends a `BookingStatusEvent` — all in one transaction. Phases 06-08
+call it rather than writing a status themselves.
+
+### Expiry (context.txt §15)
+
+An unfinished booking is held for `booking.expiryMinutes` (`AppSetting`, default
+10, falling back to `BOOKING_EXPIRY_MINUTES`) and then expired by a sweep at
+`POST /api/cron/expire-bookings`, authenticated with `CRON_SECRET` as a bearer
+token and compared in constant time.
+
+It is a route hit by the system cron, not a framework scheduler, because the
+target is a plain VPS under PM2 (`decisions.md` D1) where serverless cron
+features do not exist. On the VPS:
+
+```bash
+* * * * * curl -fsS -m 30 -X POST -H "Authorization: Bearer $CRON_SECRET" https://api.example.in/api/cron/expire-bookings >/dev/null
+```
+
+Every minute, against a 10-minute window, so a lapsed booking stops claiming to
+be payable within a minute. An in-process `setInterval` was the alternative and is
+worse: PM2 runs more than one instance, so it would sweep once per instance with
+nothing to curl.
+
+The sweep only touches `PENDING` and `PENDING_PAYMENT` — the states where the
+system is waiting on the **customer**. A booking in `PAYMENT_VERIFICATION` or
+`PENDING_APPROVAL` is waiting on an admin, and expiring it would punish a
+customer for admin latency and could discard a booking that was genuinely paid
+for. Per `decisions.md` D2 there is no slot inventory, so "releasing held state"
+is the status change itself plus clearing `expiresAt`.
+
+### Verifying Phase 05
+
+With the API running, against a **development** database:
+
+```bash
+npm run verify:bookings -w api
+```
+
+46 checks covering the three acceptance criteria: a booking POSTed with a
+tampered `amountInPaise`, `status`, `bookingNumber`, `startTime` and `endTime` is
+created correctly priced with every one of them ignored; a booking whose
+`expiresAt` is back-dated flips to `EXPIRED` on the next real sweep run, with an
+audit row and no actor; and two bookings — one `PAYMENT_VERIFICATION` /
+`VERIFICATION_PENDING`, one `EXPIRED` with no payment row — separate correctly
+under `?status=` and `?paymentStatus=`. It also checks ownership scoping, the
+vehicle-type/rate match, the sweep's authentication, and that cancelling twice is
+refused with `INVALID_STATE_TRANSITION`.
+
+Back-dating one row is the "shortened interval" the acceptance criterion asks
+for: it exercises the real production code path in a second, rather than needing
+a dev-only override on the endpoint that would then exist in production.
+
+---
+
 ## Repository conventions
 
 - **Business rules live in the backend, never in the app** (context.txt §28, §32).
@@ -382,6 +491,10 @@ mid-launch-week.
   receipt footer, parking prices — lives in the database (`AppSetting`,
   `ParkingRate`), not in `.env` and never in the APK. Changing a price must not
   need a new build (context.txt §24).
+- **One place writes a status.** Booking and payment statuses only ever change
+  through `lib/bookings/transitions.ts`, against the transition tables in
+  `@parking/shared`. A handler that needs a new move adds it to the table, where
+  the whole lifecycle can be read at once. See [Bookings](#bookings).
 - **`.env.example` is the contract.** Every variable a phase adds gets documented
   there, with what it is for and where to get it.
 - **`EXPO_PUBLIC_*` variables are public.** They are inlined into the JS bundle
@@ -405,9 +518,9 @@ mid-launch-week.
 |---|---|---|
 | 01 Setup ✅ | schema, `/api/health`, `lib/` | stacks, stores, demo form |
 | 02 Auth ✅ | Auth.js v5, JWT, Google ID token verification, `requireRole` | sign-in/sign-up, role redirect, SecureStore token |
-| 03 Profile & vehicles | `User`/`Vehicle` CRUD | profile, vehicle forms |
-| 04 Locations & rates | admin CRUD, public reads, Kalyan seed | location + package pickers, admin rate screens |
-| 05 Booking flow | transition table, booking creation, expiry sweep | booking summary |
+| 03 Profile & vehicles ✅ | `User`/`Vehicle` CRUD | profile, vehicle forms |
+| 04 Locations & rates ✅ | admin CRUD, public reads, Kalyan seed | location + package pickers, admin rate screens |
+| 05 Booking flow ✅ | transition table, booking creation, expiry sweep | vehicle picker, package confirm, booking summary, bookings list |
 | 06 Payments | method selection, UTR submission | UPI QR + UTR, cash |
 | 07 Admin approval | approve/reject | approval queue |
 | 08 Receipt | receipt endpoint | receipt screen, PDF |

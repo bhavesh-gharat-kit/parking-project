@@ -1,9 +1,10 @@
 /**
  * Customer dashboard (context.txt §9).
  *
- * Phase 03 adds the profile and vehicles entry points. Phases 04-08 fill in
- * the booking flow itself; "Booking history" below is a stub link until
- * Phase 05 gives it something to show.
+ * The two entry points that matter are "Book parking" (which starts the §9 flow:
+ * location → vehicle → package → summary) and "My bookings" (which is how a
+ * customer gets back to a booking's summary afterwards). Payment, admin approval
+ * and the receipt are Phases 06-08.
  */
 import { router } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
@@ -32,23 +33,27 @@ export default function CustomerHomeScreen() {
 
       <View style={styles.menu}>
         <AppButton label="Book parking" onPress={() => router.push('/customer/book')} />
-        <AppButton label="My profile" onPress={() => router.push('/customer/profile')} />
+        <AppButton
+          label="My bookings"
+          variant="secondary"
+          onPress={() => router.push('/customer/bookings')}
+        />
         <AppButton
           label="My vehicles"
           variant="secondary"
           onPress={() => router.push('/customer/vehicles')}
         />
         <AppButton
-          label="Booking history"
-          variant="ghost"
-          disabled
-          onPress={() => {}}
+          label="My profile"
+          variant="secondary"
+          onPress={() => router.push('/customer/profile')}
         />
       </View>
 
-      <ThemedText themeColor="textSecondary">
-        Location and package selection are live. Submitting a booking, payment and
-        receipt arrive in Phases 05-08.
+      <ThemedText type="small" themeColor="textSecondary">
+        Booking is live end to end: the parking decides the price, and an
+        unfinished booking is released after 10 minutes. Choosing how to pay and
+        the digital receipt arrive in the next releases.
       </ThemedText>
 
       <View style={styles.spacer} />
