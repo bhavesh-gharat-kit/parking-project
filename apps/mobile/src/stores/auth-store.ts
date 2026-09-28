@@ -64,6 +64,13 @@ type AuthState = {
   signInWithGoogle: () => Promise<boolean>;
 
   signOut: () => Promise<void>;
+
+  /**
+   * Adopts the user the server just returned (Phase 03 profile edit), and
+   * re-persists it so the change survives an app restart rather than only
+   * living in memory until the next `/api/auth/me` refresh overwrites it.
+   */
+  updateUser: (user: SessionUser) => Promise<void>;
 };
 
 export const useAuthStore = create<AuthState>((set, get) => ({
@@ -140,6 +147,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     // Only bother with Google if somebody was actually signed in — this pops no
     // UI, but it is a native call worth skipping on a no-op sign-out.
     if (hadUser) await signOutOfGoogle();
+  },
+
+  updateUser: async (user) => {
+    const token = get().token;
+    if (!token) return;
+    await saveSession({ token, user });
+    set({ user });
   },
 }));
 

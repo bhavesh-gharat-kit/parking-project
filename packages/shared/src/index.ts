@@ -3,3 +3,5 @@ export * from './money';
 export * from './api';
 export * from './schemas';
 export * from './auth';
+export * from './profile';
+export * from './vehicles';

@@ -1,9 +1,11 @@
 /**
- * Placeholder customer dashboard (context.txt §9).
+ * Customer dashboard (context.txt §9).
  *
- * Phases 03-08 replace this with the real flow. What it carries now is the part
- * Phase 02 owes: the signed-in identity, and a way out.
+ * Phase 03 adds the profile and vehicles entry points. Phases 04-08 fill in
+ * the booking flow itself; "Booking history" below is a stub link until
+ * Phase 05 gives it something to show.
  */
+import { router } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 
 import { AppButton } from '@/components/app-button';
@@ -26,15 +28,26 @@ export default function CustomerHomeScreen() {
         <ThemedText type="small" themeColor="textSecondary">
           {user?.email}
         </ThemedText>
-        <ThemedText type="small" themeColor="textSecondary">
-          Role: {user?.role} — assigned by the backend (context.txt §4)
-        </ThemedText>
+      </View>
+
+      <View style={styles.menu}>
+        <AppButton label="My profile" onPress={() => router.push('/customer/profile')} />
+        <AppButton
+          label="My vehicles"
+          variant="secondary"
+          onPress={() => router.push('/customer/vehicles')}
+        />
+        <AppButton
+          label="Booking history"
+          variant="ghost"
+          disabled
+          onPress={() => {}}
+        />
       </View>
 
       <ThemedText themeColor="textSecondary">
-        Placeholder. Phases 03-08 fill this stack in: profile and vehicles, location and
-        package selection, booking summary, UPI/cash payment, booking history and the
-        digital receipt.
+        Booking a spot — location and package selection, payment and receipt —
+        arrives in Phases 04-08.
       </ThemedText>
 
       <View style={styles.spacer} />
@@ -55,5 +68,6 @@ const styles = StyleSheet.create({
     padding: Spacing.three,
     gap: Spacing.one,
   },
+  menu: { gap: Spacing.two },
   spacer: { flex: 1 },
 });

@@ -8,7 +8,6 @@
  * to it can never disagree about the shape.
  */
 import { z } from 'zod';
-import { VehicleTypeSchema } from './enums';
 
 /* ──────────────────────────── Primitives ───────────────────────────── */
 
@@ -73,21 +72,3 @@ export const UpiUtrSchema = z
   .refine((value) => /^[A-Z0-9]{8,24}$/.test(value), 'Enter the UPI reference exactly as shown in your payment app');
 
 export const CuidSchema = z.string().min(1, 'Required');
-
-/* ───────────────────── Demo form (Phase 01 only) ────────────────────── */
-
-/**
- * Proves the React Hook Form + Zod + `@parking/shared` wiring in the mobile app
- * (see `apps/mobile/app/demo-form.tsx`). Uses the real primitives above so the
- * demo is exercising the same validators Phase 03's vehicle form will.
- *
- * Delete this once Phase 03 ships a real form.
- */
-export const DemoVehicleFormSchema = z.object({
-  ownerName: z.string().trim().min(2, 'Name must be at least 2 characters').max(80),
-  phone: IndianPhoneSchema,
-  vehicleNumber: VehicleNumberSchema,
-  vehicleType: VehicleTypeSchema,
-});
-export type DemoVehicleFormValues = z.input<typeof DemoVehicleFormSchema>;
-export type DemoVehicleFormParsed = z.output<typeof DemoVehicleFormSchema>;

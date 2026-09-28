@@ -74,8 +74,6 @@ export default function RootLayout() {
 
         <Stack.Screen name="customer" options={{ headerShown: false }} />
         <Stack.Screen name="admin" options={{ headerShown: false }} />
-
-        <Stack.Screen name="demo-form" options={{ title: 'Form wiring check' }} />
       </Stack>
     </ThemeProvider>
   );
