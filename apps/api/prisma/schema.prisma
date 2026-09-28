@@ -1,0 +1,560 @@
+// ═══════════════════════════════════════════════════════════════════════════
+//  Pay & Park — schema v1
+//
+//  Section references (§n) point at `_/context.txt`; D1-D4 point at
+//  `_/decisions.md`. A reviewer should be able to read this file top to bottom
+//  and see how the business spec maps onto tables without further explanation.
+//
+//  Three conventions run through the whole file:
+//
+//  1. MONEY is an integer count of paise, never a float or Decimal, and every
+//     such column is named `...InPaise` (₹70 → 7000). Rationale in
+//     `packages/shared/src/money.ts`.
+//
+//  2. NOTHING IS HARD-DELETED. Rows that stop being offered get `isActive =
+//     false`; required relations use `onDelete: Restrict` so a location, rate or
+//     vehicle referenced by a booking cannot be deleted out from under a
+//     receipt or a revenue report.
+//
+//  3. BOOKINGS SNAPSHOT their price and package. Admins change rates without an
+//     app release (§24), so a booking that re-read the live `ParkingRate` would
+//     silently rewrite its own history. See the snapshot block on `Booking`.
+//
+//  Per D2 there are deliberately NO slot/inventory tables: a booking is
+//  {location, vehicle, rate, start, end}. `ParkingLocation.capacity` is a plain
+//  number, and nothing here forbids adding a `ParkingSlot` table later — a
+//  nullable `slotId` on `Booking` would be the whole change (§8, §25).
+// ═══════════════════════════════════════════════════════════════════════════
+
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+// Prisma 7: the connection URL lives in `prisma.config.ts` (env-driven), not
+// here. Runtime access goes through the MariaDB driver adapter in `lib/db.ts`.
+datasource db {
+  provider = "mysql"
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  IDENTITY  (§4, §5, §19, §22 · D3)
+// ═══════════════════════════════════════════════════════════════════════════
+
+/// §4, §19 — set by the backend only. The login screen never offers a role
+/// choice; `role` is copied into the Auth.js JWT claims at sign-in (D3).
+enum UserRole {
+  USER
+  ADMIN
+}
+
+/// A customer or an admin. One table for both — the same Android binary serves
+/// both audiences and branches on `role` after login (§19).
+///
+/// D3 puts Auth.js on a JWT session strategy, so there are deliberately no
+/// `Account` / `Session` / `VerificationToken` tables: nothing needs persisting
+/// between requests beyond the user row itself. Google accounts are linked by
+/// storing the verified `sub` claim in `googleId`.
+model User {
+  id String @id @default(cuid())
+
+  /// Login identifier for both providers, and the key a Google sign-in matches
+  /// an existing account on. Stored lower-cased.
+  email String  @unique
+  name  String?
+
+  /// §17 — the receipt shows customer contact information. Not unique: a family
+  /// can share a number, and Google sign-ups arrive without one.
+  phone String? @db.VarChar(15)
+
+  /// bcrypt hash. NULL for an account that only ever signed in with Google (D3).
+  passwordHash String?
+
+  /// The `sub` claim of a Google ID token this backend verified itself (D3 —
+  /// the RN app obtains the ID token, the backend validates it).
+  googleId String? @unique
+
+  /// Avatar URL from Google, if any.
+  imageUrl String? @db.Text
+
+  role UserRole @default(USER)
+
+  /// §22 — "manage/disable users where required". A disabled user keeps their
+  /// booking history; they just cannot sign in.
+  isActive Boolean @default(true)
+
+  emailVerifiedAt DateTime?
+  lastLoginAt     DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  vehicles   Vehicle[]
+  bookings   Booking[]
+  pushTokens PushToken[]
+
+  /// Bookings/payments this user acted on as an admin (§21).
+  reviewedBookings Booking[]             @relation("BookingReviewedBy")
+  verifiedPayments Payment[]             @relation("PaymentVerifiedBy")
+  bookingEvents    BookingStatusEvent[]  @relation("BookingEventActor")
+
+  @@index([role, isActive])
+  @@index([createdAt])
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  VEHICLES  (§5)
+// ═══════════════════════════════════════════════════════════════════════════
+
+/// §5 — "Bike, Car, Other, if required". An enum rather than a lookup table:
+/// the business attaches no data to a vehicle type, and both `ParkingRate` and
+/// `Booking` key off it. Adding a type is one migration plus one line in
+/// `packages/shared/src/enums.ts`, with no change to booking or rate logic.
+enum VehicleType {
+  BIKE
+  CAR
+  OTHER
+}
+
+/// §5 — a booking is always associated with a vehicle.
+model Vehicle {
+  id     String @id @default(cuid())
+  userId String
+
+  /// Normalised: upper-case, no spaces or dashes ("MH04AB1234"). The shared
+  /// `VehicleNumberSchema` does the normalising on the way in.
+  number String      @db.VarChar(14)
+  type   VehicleType
+
+  /// Optional free text ("Honda Activa") to help a customer tell two bikes apart.
+  makeModel String? @db.VarChar(60)
+
+  /// Set once the customer removes the vehicle. Not deleted, because bookings
+  /// point at it and the receipt (§17) must stay readable.
+  isActive Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bookings Booking[]
+
+  /// The same customer cannot register one plate twice. Two different customers
+  /// legitimately can (a shared household vehicle), so this is not globally unique.
+  @@unique([userId, number])
+  @@index([number])
+  @@index([userId, isActive])
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  LOCATIONS  (§3, §6, §23)
+// ═══════════════════════════════════════════════════════════════════════════
+
+/// §3, §6, §23 — Kalyan is row one, not a hardcoded assumption. The customer
+/// app always renders a location list from this table, so adding Dombivli or
+/// Thane later needs no app release.
+model ParkingLocation {
+  id String @id @default(cuid())
+
+  name String @db.VarChar(120)
+
+  /// Short branch code used as the prefix of a booking number, e.g. "KLY" →
+  /// "KLY-260928-4F2B" (§17, generated in Phase 05).
+  code String @unique @db.VarChar(8)
+
+  addressLine String  @db.VarChar(255)
+  city        String  @db.VarChar(80)
+  state       String  @db.VarChar(80)
+  pincode     String? @db.VarChar(10)
+
+  latitude  Decimal? @db.Decimal(10, 7)
+  longitude Decimal? @db.Decimal(10, 7)
+
+  contactPhone String? @db.VarChar(15)
+
+  /// §6, §23 — an inactive location disappears from the customer's list but
+  /// keeps its bookings and rates.
+  isActive Boolean @default(true)
+
+  /// §20 — "current parking usage/availability where applicable". A soft
+  /// headcount for the admin dashboard, NOT an inventory table (D2). NULL means
+  /// the business is not tracking a cap at this branch.
+  capacity Int?
+
+  /// §11, §24 — the UPI details the app shows on the payment screen, per branch,
+  /// so a second branch can collect into its own account and so changing the QR
+  /// never needs an app release. Falls back to the global `AppSetting` keys when
+  /// NULL.
+  upiVpa        String? @db.VarChar(120)
+  upiPayeeName  String? @db.VarChar(120)
+  upiQrImageUrl String? @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  rates    ParkingRate[]
+  bookings Booking[]
+
+  @@index([isActive])
+  @@index([city])
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  RATES / PACKAGES  (§7, §24)
+// ═══════════════════════════════════════════════════════════════════════════
+
+/// §7, §24 — the price list. One row is one thing a customer can buy:
+/// "Kalyan · Car · 2 Hours · ₹70".
+///
+/// This table is the ONLY place a price comes from (§32): the customer never
+/// sends an amount, the booking endpoint looks the rate up server-side, and the
+/// admin can edit a price here without a new APK (§24).
+model ParkingRate {
+  id         String @id @default(cuid())
+  locationId String
+
+  /// §7 — pricing depends on vehicle type (bike and car differ).
+  vehicleType VehicleType
+
+  /// What the customer reads: "1 Hour", "2 Hours", "Full Day" (§7).
+  label String @db.VarChar(40)
+
+  /// The authoritative duration. Phase 05 computes `Booking.endTime` from this,
+  /// never from parsing `label`. "Full Day" = 1440.
+  durationMinutes Int
+
+  /// Integer paise. ₹70 → 7000.
+  priceInPaise Int
+
+  /// Display order in the customer's package list (cheapest/shortest first).
+  sortOrder Int @default(0)
+
+  /// Retiring a price sets this false. Never delete: bookings reference the row.
+  isActive Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  location ParkingLocation @relation(fields: [locationId], references: [id], onDelete: Restrict)
+  bookings Booking[]
+
+  /// One price per (branch, vehicle type, duration) — otherwise "Car, 2 hours"
+  /// at Kalyan would be ambiguous and the backend could not pick a price.
+  @@unique([locationId, vehicleType, durationMinutes])
+  @@index([locationId, vehicleType, isActive])
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  BOOKINGS  (§9, §14, §15, §16)
+// ═══════════════════════════════════════════════════════════════════════════
+
+/// §14 — the booking's own lifecycle. Kept strictly separate from
+/// `PaymentStatus`: they answer different questions ("can this vehicle park?"
+/// vs "did the money arrive?") and §32 forbids collapsing them.
+///
+/// Phase 05 owns the legal transition table; this is only the value set.
+enum BookingStatus {
+  /// Created; payment method not chosen yet (Phase 05 stops here).
+  PENDING
+  /// UPI chosen; waiting for the customer to pay and submit a UTR (§11).
+  PENDING_PAYMENT
+  /// UTR submitted; admin has not checked the bank/UPI statement yet (§11).
+  PAYMENT_VERIFICATION
+  /// Cash chosen; waiting for the admin to receive cash at the gate (§12).
+  PENDING_APPROVAL
+  /// Admin approved. The receipt becomes available (§17).
+  CONFIRMED
+  /// Admin rejected — money not found, or cash never paid.
+  REJECTED
+  /// Customer withdrew it.
+  CANCELLED
+  /// Not carried through in time; released by the sweep (§15).
+  EXPIRED
+  /// Parking period finished.
+  COMPLETED
+}
+
+/// §10 — the two methods the MVP supports. §13's future gateway adds a value
+/// here and fills the `gateway*` columns already present on `Payment`; nothing
+/// needs restructuring.
+enum PaymentMethod {
+  UPI
+  CASH
+}
+
+/// §9, §16 — one row per booking a customer makes.
+model Booking {
+  id String @id @default(cuid())
+
+  /// §17 — human-readable identifier printed on the receipt and searched by the
+  /// admin (§21), e.g. "KLY-260928-4F2B". Generated in application code at
+  /// creation time (Phase 05/08), never shown as the raw cuid.
+  bookingNumber String @unique @db.VarChar(24)
+
+  userId     String
+  locationId String
+  vehicleId  String
+
+  /// Which price list row was applied — kept for traceability and for the admin
+  /// to see which package was sold, even after the price changes.
+  rateId String
+
+  // ─────────────────────────────────────────────────────────────────────────
+  //  SNAPSHOT — values copied at creation time, never re-read from the live
+  //  rows above.
+  //
+  //  Rates are mutable by design (§24) and a customer can rename or remove a
+  //  vehicle, so a booking that joined out to `ParkingRate` / `Vehicle` to
+  //  render its receipt (§17) or feed a revenue report (§27) would silently
+  //  rewrite last week's history the moment the admin edits a price. These
+  //  columns are what the receipt and the reports read.
+  // ─────────────────────────────────────────────────────────────────────────
+
+  vehicleNumber   String      @db.VarChar(14)
+  vehicleType     VehicleType
+  rateLabel       String      @db.VarChar(40)
+  durationMinutes Int
+
+  /// The payable amount, in paise, fixed at creation. §32: the customer never
+  /// supplies this — the backend derives it from `ParkingRate.priceInPaise`.
+  amountInPaise Int
+
+  /// §9 — "Start time / End time where applicable". `endTime` is
+  /// `startTime + durationMinutes`, computed by the backend.
+  startTime DateTime
+  endTime   DateTime
+
+  status BookingStatus @default(PENDING)
+
+  /// NULL until the customer picks UPI or cash (Phase 06).
+  paymentMethod PaymentMethod?
+
+  /// §15 — while the booking is awaiting payment/approval this is
+  /// `createdAt + BOOKING_EXPIRY_MINUTES` (default 10). The Phase 05 sweep looks
+  /// for rows where this has passed and the status is still non-terminal.
+  /// Cleared once the booking reaches a terminal state.
+  expiresAt DateTime?
+
+  confirmedAt DateTime?
+  rejectedAt  DateTime?
+  cancelledAt DateTime?
+  completedAt DateTime?
+  expiredAt   DateTime?
+
+  /// §21 — which admin approved or rejected this, and why. Kept on the booking
+  /// (not only in the event log) so the admin list can show it without a join.
+  reviewedById String?
+  reviewedAt   DateTime?
+  reviewNote   String?   @db.Text
+
+  /// Free-text operational note from the gate.
+  notes String? @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user       User            @relation(fields: [userId], references: [id], onDelete: Restrict)
+  location   ParkingLocation @relation(fields: [locationId], references: [id], onDelete: Restrict)
+  vehicle    Vehicle         @relation(fields: [vehicleId], references: [id], onDelete: Restrict)
+  rate       ParkingRate     @relation(fields: [rateId], references: [id], onDelete: Restrict)
+  reviewedBy User?           @relation("BookingReviewedBy", fields: [reviewedById], references: [id], onDelete: SetNull)
+
+  /// One payment per booking in Phase 1 (one UPI attempt or one cash handover).
+  /// A Phase-13 gateway with retries would drop this `@unique` and order by
+  /// `createdAt`; nothing else would change.
+  payment Payment?
+
+  /// Append-only audit trail (§21).
+  statusEvents BookingStatusEvent[]
+
+  /// §16 — the customer's own history, newest first.
+  @@index([userId, createdAt])
+  /// §21 — the admin's pending-work queue.
+  @@index([status, createdAt])
+  /// §15 — the expiry sweep.
+  @@index([status, expiresAt])
+  /// §20, §26, §27 — dashboard and revenue reports, grouped by branch and day.
+  @@index([locationId, createdAt])
+  @@index([createdAt])
+  @@index([vehicleNumber])
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  PAYMENTS  (§10, §11, §12, §13, §14)
+// ═══════════════════════════════════════════════════════════════════════════
+
+/// §14 — the money's state, a separate concern from `BookingStatus` (§32).
+enum PaymentStatus {
+  /// Nothing has arrived: cash booking not yet paid, or UPI QR shown but no UTR.
+  PENDING
+  /// A UTR was submitted. §32: that is a claim by the customer, not proof.
+  VERIFICATION_PENDING
+  /// An admin confirmed the money arrived. §27: only this counts as revenue.
+  PAID
+  /// Reserved for the Phase-13 gateway (§13); unused by UPI-QR and cash.
+  FAILED
+  /// An admin checked and the money was not there.
+  REJECTED
+  REFUNDED
+}
+
+/// §10-13 — how one booking was paid for.
+model Payment {
+  id String @id @default(cuid())
+
+  /// One-to-one with the booking; see the note on `Booking.payment`.
+  bookingId String @unique
+
+  method PaymentMethod
+  status PaymentStatus @default(PENDING)
+
+  /// Copied from the booking so the payment record is self-contained for
+  /// reconciliation, in paise.
+  amountInPaise Int
+
+  // ── UPI QR + UTR path (§11) ────────────────────────────────────────────
+  /// The reference the customer read off GPay/PhonePe/Paytm. §32: information
+  /// for the admin to check against the bank statement — entering it must never
+  /// move `status` to `PAID`. Indexed, not unique: a duplicate UTR is a
+  /// fraud signal for the admin to judge, not a database error at submit time.
+  upiUtr         String?   @db.VarChar(32)
+  utrSubmittedAt DateTime?
+  /// Which VPA the customer was shown, in case the branch's UPI ID changes later.
+  upiPayeeVpa    String?   @db.VarChar(120)
+
+  // ── Cash-at-parking path (§12) ─────────────────────────────────────────
+  /// When the admin physically took the cash.
+  cashReceivedAt DateTime?
+
+  // ── Admin verification (§11, §12, §21) ─────────────────────────────────
+  verifiedById String?
+  verifiedAt   DateTime?
+  reviewNote   String?   @db.Text
+
+  /// When the money was confirmed. §27 — revenue reports date off this, not off
+  /// `Booking.createdAt`, so a booking paid the next morning lands on the right day.
+  paidAt     DateTime?
+  refundedAt DateTime?
+
+  // ── Future payment gateway (§13) ───────────────────────────────────────
+  // Reserved now so adding Razorpay is a migration on this table plus one new
+  // `PaymentMethod` value — not a redesign.
+  gatewayProvider  String? @db.VarChar(40)
+  gatewayOrderId   String? @db.VarChar(120)
+  gatewayPaymentId String? @db.VarChar(120)
+  /// Raw webhook/callback body, kept verbatim for dispute handling.
+  gatewayPayload   Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  booking    Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  verifiedBy User?   @relation("PaymentVerifiedBy", fields: [verifiedById], references: [id], onDelete: SetNull)
+
+  /// §20 — "UPI pending verification" and "cash pending approval" are two
+  /// separate counts on the admin dashboard; this composite serves both.
+  @@index([method, status])
+  @@index([status])
+  @@index([upiUtr])
+  /// §27 — revenue by day and by method.
+  @@index([paidAt])
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  AUDIT TRAIL  (§21)
+// ═══════════════════════════════════════════════════════════════════════════
+
+/// Append-only log of every booking/payment status change.
+///
+/// This system takes money on an admin's word ("yes, that UTR is in the
+/// statement", "yes, I took the cash"), so who changed what and when is
+/// operational evidence, not a nice-to-have: it answers "who approved this
+/// booking?" and "the customer says they submitted a different UTR" without a
+/// backup restore. Phase 05 writes a row on every transition; Phase 07's
+/// approve/reject and Phase 05's expiry sweep do the same.
+model BookingStatusEvent {
+  id        String @id @default(cuid())
+  bookingId String
+
+  fromStatus BookingStatus?
+  toStatus   BookingStatus
+
+  fromPaymentStatus PaymentStatus?
+  toPaymentStatus   PaymentStatus?
+
+  /// NULL when the actor was the system — i.e. the expiry sweep (§15).
+  actorId   String?
+  actorRole UserRole?
+
+  /// Rejection reason, submitted UTR, or whatever context the transition carried.
+  note String? @db.Text
+
+  createdAt DateTime @default(now())
+
+  booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  actor   User?   @relation("BookingEventActor", fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([bookingId, createdAt])
+  @@index([createdAt])
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  PUSH NOTIFICATIONS  (D4 — wired up in Phase 09)
+// ═══════════════════════════════════════════════════════════════════════════
+
+enum DevicePlatform {
+  ANDROID
+  IOS
+  WEB
+}
+
+/// D4 — one row per device, not per user, because a customer may install the app
+/// on a phone and a tablet. Unused until Phase 09; present now so that phase is
+/// a route handler and a send call rather than a migration during launch week.
+model PushToken {
+  id     String @id @default(cuid())
+  userId String
+
+  /// An Expo push token, "ExponentPushToken[xxxxx]". Unique: if the same device
+  /// token reappears under a different account it should move, not duplicate.
+  token String @unique @db.VarChar(255)
+
+  platform   DevicePlatform @default(ANDROID)
+  deviceName String?        @db.VarChar(120)
+
+  /// Expo reports `DeviceNotRegistered` for uninstalled apps; Phase 09 flips this
+  /// to false rather than deleting, so a reinstall can be told apart from a
+  /// never-registered device.
+  isActive   Boolean   @default(true)
+  lastUsedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isActive])
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  SETTINGS
+// ═══════════════════════════════════════════════════════════════════════════
+
+/// Admin-editable business settings, so the things printed on a receipt or shown
+/// on the payment screen are not baked into the APK (the point of §24).
+///
+/// Known keys (see `lib/settings.ts` once Phase 04 adds the admin screen):
+///   business.name              — receipt header (§17)
+///   business.supportPhone      — receipt footer (§17)
+///   payment.upi.vpa            — global UPI fallback when a location has none (§11)
+///   payment.upi.payeeName      — global UPI payee-name fallback
+///   booking.expiryMinutes      — overrides BOOKING_EXPIRY_MINUTES (§15)
+///
+/// A key-value table rather than a one-row settings model: new keys need no
+/// migration, and nothing here is queried or joined on.
+model AppSetting {
+  key   String @id @db.VarChar(80)
+  value String @db.Text
+
+  updatedAt DateTime @updatedAt
+}

@@ -1,0 +1,29 @@
+# Most patterns live in the repo-root .gitignore; these are mobile-specific.
+
+# Expo
+.expo/
+dist/
+web-build/
+expo-env.d.ts
+.metro-health-check*
+
+# Continuous Native Generation — never committed, never hand-edited.
+# `npx expo run:android` and EAS Build regenerate these from app.config.ts.
+/android
+/ios
+.kotlin/
+
+# Env files. `.env.example` is the committed template.
+.env
+.env.*
+!.env.example
+
+# Signing material — must never reach the repo.
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.keystore
+
+*.tsbuildinfo

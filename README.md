@@ -1,0 +1,281 @@
+# Pay & Park
+
+Parking management and booking system for a Pay & Park business in Kalyan, Maharashtra.
+
+One repository holding two applications and the code they share:
+
+| Path | What it is |
+|---|---|
+| [`apps/api`](apps/api) | Next.js 16 (App Router) + Prisma + MySQL. The backend for the Android app today, and the customer website + admin web dashboard in Phase 2. |
+| [`apps/mobile`](apps/mobile) | Expo / React Native Android app, customer **and** admin in one binary. |
+| [`packages/shared`](packages/shared) | Enums, Zod schemas, the API response envelope and money helpers used by both. |
+
+The full business specification lives in `_/context.txt`, and the decisions that
+resolved its open questions in `_/decisions.md`. That folder is intentionally
+untracked — it is planning material, not source.
+
+---
+
+## Quick start
+
+```bash
+npm install
+```
+
+**Backend**
+
+```bash
+cp apps/api/.env.example apps/api/.env   # then set DATABASE_URL and AUTH_SECRET
+npm run db:migrate                        # creates the schema in MySQL
+npm run db:seed                           # AppSetting defaults
+npm run dev:api                           # http://localhost:3000
+```
+
+```bash
+curl -s http://localhost:3000/api/health
+```
+
+```json
+{"ok":true,"data":{"status":"ok","database":"up","databaseLatencyMs":4,"version":"0.1.0","environment":"development","uptimeSeconds":6,"timestamp":"..."}}
+```
+
+**Mobile app**
+
+```bash
+cp apps/mobile/.env.example apps/mobile/.env   # set EXPO_PUBLIC_API_BASE_URL
+npm run dev:mobile
+```
+
+`npm run dev:mobile` starts Metro expecting a **dev client** (see
+[Why a dev client](#why-a-dev-client)). Build and install one once per device:
+
+```bash
+cd apps/mobile && npx eas-cli@latest build --profile development --platform android
+```
+
+`npm run start:go -w mobile` will open in Expo Go instead, which is fine for the
+Phase 01 placeholder screens but will break as soon as Phase 02 adds Google
+Sign-In.
+
+**Everything at once**
+
+```bash
+npm run typecheck && npm run lint
+```
+
+---
+
+## Why this repo layout
+
+A single repository with npm workspaces, and deliberately no Turborepo or Nx.
+
+**One repo, not two.** The backend and the app are built by the same person in
+the same week, and every phase from 02 onward changes both sides together — an
+endpoint and the screen that calls it. Two repositories would mean two PRs and a
+version-skew question for every one of those changes. One repo also means the
+Zod schema an endpoint validates with and the schema its form validates with can
+be *the same file* rather than two files someone has to remember to update.
+
+**Workspaces, not a monolith.** `apps/api` and `apps/mobile` have genuinely
+incompatible toolchains — Next's bundler and Metro, and as it happens two
+different TypeScript majors. They need separate `package.json` files and separate
+`node_modules` resolution. npm workspaces gives exactly that and nothing else.
+
+**A root React pin.** The root `package.json` declares `react`/`react-dom` at
+Expo SDK 57's version purely to keep **one** copy of React in the tree: the
+`prisma` CLI pulls in `@prisma/studio-core`, whose loose React peer range
+otherwise lets npm hoist a second, newer React beside it — two copies fail
+`expo-doctor`'s duplicate-native-module check, and a native build must contain
+exactly one. Nothing at the root imports React.
+
+**No Turborepo/Nx.** Those earn their keep on build-graph caching across many
+packages. Here there are two apps and one source-only package; the "build graph"
+is `prisma generate → next build`, and Metro does not use the dependency graph a
+task runner would cache. It would be configuration to maintain with nothing to
+show for it. The root `package.json` scripts do the job:
+
+```
+npm run dev:api        npm run db:migrate     npm run typecheck
+npm run dev:mobile     npm run db:seed        npm run lint
+npm run build:api      npm run db:studio
+```
+
+**npm, not pnpm.** pnpm's symlinked store needs extra Metro configuration to
+work with React Native; npm's flat hoisting is what Metro expects. For a two-app
+repo the install-speed difference is not worth the extra failure mode during
+launch week.
+
+---
+
+## Shared typing strategy
+
+`packages/shared` is a **source-only TypeScript package**: no build step, no
+`dist/`, `main` points straight at `src/index.ts`. Both apps compile it as part
+of their own build — Next via `transpilePackages`, Metro via `watchFolders` in
+[`apps/mobile/metro.config.js`](apps/mobile/metro.config.js). So editing a shared
+schema hot-reloads in both apps with nothing to rebuild in between.
+
+It holds four things:
+
+- **Enum values** (`BookingStatus`, `PaymentStatus`, `VehicleType`, …) as
+  `as const` arrays, with the union type and a Zod enum derived from each.
+- **Zod schemas** — the API validates request bodies with them, the app uses the
+  same schema as its React Hook Form resolver. Request/response *types* are
+  `z.infer`'d from the schemas rather than declared separately, so a schema and
+  its type cannot disagree.
+- **The API envelope** (`ApiResponse<T>`, error codes, pagination) so every
+  endpoint answers in one shape and the client has one place to handle failure.
+- **Money helpers** — see [Money](#money).
+
+### What it deliberately does not do
+
+It does **not** re-export Prisma's types, and it never imports `@prisma/client`.
+Prisma's generated client is Node-only; pulling it into the shared package would
+drag it into the React Native bundle. So the DB enums are declared twice: once in
+`prisma/schema.prisma` for MySQL, once here for the app.
+
+Two declarations of one truth is a real cost, and the way it usually goes wrong
+is someone adds `VehicleType.TEMPO` to the schema and forgets the shared file, at
+which point the app silently fails to render a vehicle type. So that drift is a
+**compile error**, not a runtime surprise:
+[`apps/api/lib/enum-parity.ts`](apps/api/lib/enum-parity.ts) asserts exact type
+equality between each Prisma enum and its shared counterpart. Adding a value to
+one side and not the other fails `npm run typecheck` on the line naming the enum
+that drifted.
+
+There is no generated API client (no tRPC, no OpenAPI codegen). Route handlers
+and the screens calling them are written in the same commit by the same person;
+the shared Zod schemas already pin down the contract, and a codegen step is
+another thing to keep running during launch week.
+
+---
+
+## Money
+
+Every rupee amount is an **integer count of paise** — ₹70 is `7000` — and every
+such field is named `...InPaise` so a rupee value cannot be assigned to one by
+mistake. Reasons, in order: no floating-point rounding error; survives JSON as a
+plain number (a Prisma `Decimal` becomes a string and needs decimal.js in the app
+bundle); and it is already the unit Razorpay's API takes, so the future gateway
+(context.txt §13) needs no conversion layer.
+
+`formatInr` in [`packages/shared/src/money.ts`](packages/shared/src/money.ts)
+does the display side, with Indian digit grouping (`₹12,34,567`).
+
+---
+
+## Database
+
+MySQL via Prisma 7. [`apps/api/prisma/schema.prisma`](apps/api/prisma/schema.prisma)
+is annotated throughout with the `context.txt` sections each model implements —
+read it top to bottom and the mapping from §7-§14 should need no further
+explanation. The four things worth knowing before reading it:
+
+1. **Booking status and payment status are separate enums on separate models**
+   (`Booking.status`, `Payment.status`) and are never collapsed — context.txt
+   §14 and §32. "Can this vehicle park?" and "did the money arrive?" are
+   different questions, and the whole UPI flow depends on being able to answer
+   them differently at the same time.
+2. **Bookings snapshot their price and package.** An admin changing a rate must
+   not rewrite what last week's bookings cost, so `Booking` copies
+   `amountInPaise`, `rateLabel`, `durationMinutes`, `vehicleNumber` and
+   `vehicleType` at creation time. `rateId` is kept alongside for traceability,
+   but nothing reads a price through it.
+3. **No slot or inventory tables**, per `decisions.md` D2. A booking is
+   `{location, vehicle, rate, startTime, endTime}`. `ParkingLocation.capacity`
+   is a plain number for the admin dashboard. If the business later confirms
+   physical numbered slots (context.txt §8, §25), that is a new `ParkingSlot`
+   table plus a nullable `slotId` on `Booking` — nothing here forecloses it.
+4. **Nothing is hard-deleted.** Retired locations, rates and vehicles get
+   `isActive = false`, and required relations use `onDelete: Restrict` so no row a
+   receipt or revenue report depends on can be deleted out from under it.
+
+Prisma 7 notes, since they differ from most examples you will find: the
+connection URL lives in [`apps/api/prisma.config.ts`](apps/api/prisma.config.ts)
+rather than in `schema.prisma`; the client is generated by the newer
+`prisma-client` generator into `apps/api/generated/prisma` (gitignored,
+regenerated by `npm run db:generate`); and MySQL is reached through the
+`@prisma/adapter-mariadb` driver adapter, configured in
+[`apps/api/lib/db.ts`](apps/api/lib/db.ts).
+
+---
+
+## Why a dev client
+
+The Android app is an Expo **managed** project — no `android/` directory in the
+repo, native code generated by EAS Build from `app.config.ts`. But it cannot run
+in Expo Go, which only contains the native modules Expo chose to bundle. This app
+needs three that are not in that set:
+
+- Google Sign-In (`decisions.md` D3),
+- `expo-secure-store`, for the session JWT,
+- `expo-notifications`, for booking status pushes (D4).
+
+So development runs against a custom **dev client** — an APK containing this
+project's native modules, installed once per device, after which `npm run
+dev:mobile` reloads JS into it exactly as Expo Go would.
+[`apps/mobile/eas.json`](apps/mobile/eas.json) defines it:
+
+| Profile | Produces | For |
+|---|---|---|
+| `development` | APK, `developmentClient: true` | day-to-day development |
+| `preview` | APK, production JS | **the Thursday launch build** (`decisions.md` D1 — sideloaded APK, not a Play Store release) |
+| `production` | AAB | the later Play Store submission |
+
+Each profile sets `APP_VARIANT`, which `app.config.ts` turns into a distinct
+Android package name — so the dev client and the launch APK can sit on the same
+phone at once.
+
+`expo-secure-store` and `expo-notifications` are installed already, in Phase 01,
+even though nothing uses them until Phases 02 and 09. Adding a native module
+means rebuilding the dev client; having them present now means one fewer rebuild
+mid-launch-week.
+
+---
+
+## Repository conventions
+
+- **Business rules live in the backend, never in the app** (context.txt §28, §32).
+  The client never computes a price, never decides a status transition, and never
+  sends an amount. The Phase 2 website has to reach the same answers from the
+  same endpoints.
+- **`role` comes from the session JWT** and nothing else. The app has no code
+  path that grants admin access (context.txt §4); the Phase 01 role switcher on
+  the placeholder home screen only fills the client store so both navigation
+  stacks are reachable, and is deleted in Phase 02.
+- **Anything a non-developer may need to change** — business name, UPI ID,
+  receipt footer, parking prices — lives in the database (`AppSetting`,
+  `ParkingRate`), not in `.env` and never in the APK. Changing a price must not
+  need a new build (context.txt §24).
+- **`.env.example` is the contract.** Every variable a phase adds gets documented
+  there, with what it is for and where to get it.
+- **`EXPO_PUBLIC_*` variables are public.** They are inlined into the JS bundle
+  and readable by anyone with the APK. No secrets there, ever.
+
+---
+
+## Environment requirements
+
+- **Node 20.19.4+** (or 22.13+ / 24.3+) — the engine range Expo SDK 57's Metro
+  declares. `.nvmrc` pins 22.13.0. Phase 01 was verified on 20.19.2, which prints
+  an `EBADENGINE` warning on install but does bundle successfully; upgrade before
+  relying on it.
+- **MySQL 5.7+ or MariaDB 10.2+**, for JSON column support.
+
+---
+
+## Where each phase lands
+
+| Phase | Backend | Mobile |
+|---|---|---|
+| 01 Setup ✅ | schema, `/api/health`, `lib/` | stacks, stores, demo form |
+| 02 Auth | Auth.js v5, JWT, Google ID token verification | sign-in, role redirect, token storage |
+| 03 Profile & vehicles | `User`/`Vehicle` CRUD | profile, vehicle forms |
+| 04 Locations & rates | admin CRUD, public reads, Kalyan seed | location + package pickers, admin rate screens |
+| 05 Booking flow | transition table, booking creation, expiry sweep | booking summary |
+| 06 Payments | method selection, UTR submission | UPI QR + UTR, cash |
+| 07 Admin approval | approve/reject | approval queue |
+| 08 Receipt | receipt endpoint | receipt screen, PDF |
+| 09 Push | `PushToken` registration, sends | permissions, deep links |
+| 10 Dashboard & reports | aggregation endpoints | dashboard, reports |
+| 11 Deployment | Nginx, PM2, HTTPS | EAS `preview` APK |

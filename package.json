@@ -1,0 +1,29 @@
+{
+  "name": "parking-app",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Pay & Park — parking management and booking system (Next.js API + Expo Android app)",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "//devDependencies": "React is declared at the root only to pin ONE copy for the whole workspace. Expo SDK 57 expects react 19.2.3; the prisma CLI pulls in @prisma/studio-core, whose React peer range let npm hoist a second, newer React next to it. Two copies in the tree make `expo-doctor` fail its duplicate-native-module check, and a native build must contain only one React. Nothing at the root imports React.",
+  "engines": {
+    "node": ">=20.19.4"
+  },
+  "scripts": {
+    "dev:api": "npm run dev -w api",
+    "dev:mobile": "npm run start -w mobile",
+    "build:api": "npm run build -w api",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "lint": "npm run lint --workspaces --if-present",
+    "db:generate": "npm run db:generate -w api",
+    "db:migrate": "npm run db:migrate -w api",
+    "db:studio": "npm run db:studio -w api",
+    "db:seed": "npm run db:seed -w api"
+  },
+  "devDependencies": {
+    "react": "19.2.3",
+    "react-dom": "19.2.3"
+  }
+}
