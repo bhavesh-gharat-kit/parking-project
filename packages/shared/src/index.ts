@@ -5,3 +5,5 @@ export * from './schemas';
 export * from './auth';
 export * from './profile';
 export * from './vehicles';
+export * from './locations';
+export * from './rates';

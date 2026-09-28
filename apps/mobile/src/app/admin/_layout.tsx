@@ -1,8 +1,9 @@
 /**
  * Admin stack.
  *
- * Phases 04, 07 and 10 add the screens: booking approval queue, UPI verification,
- * cash approval, location and rate management, dashboard and reports.
+ * Phase 04 adds location and rate management. Phases 07 and 10 add the rest:
+ * booking approval queue, UPI verification, cash approval, dashboard and
+ * reports.
  *
  * The `'ADMIN'` guard is a convenience — it keeps a customer from reaching screens
  * that would only show them failed requests. It is emphatically not what makes
@@ -22,6 +23,10 @@ export default function AdminLayout() {
   return (
     <Stack>
       <Stack.Screen name="index" options={{ title: 'Admin' }} />
+      <Stack.Screen name="locations/index" options={{ title: 'Locations' }} />
+      <Stack.Screen name="locations/[id]/index" options={{ title: 'Location' }} />
+      <Stack.Screen name="locations/[id]/rates/index" options={{ title: 'Rates' }} />
+      <Stack.Screen name="locations/[id]/rates/[rateId]" options={{ title: 'Rate' }} />
     </Stack>
   );
 }

@@ -31,6 +31,7 @@ export default function CustomerHomeScreen() {
       </View>
 
       <View style={styles.menu}>
+        <AppButton label="Book parking" onPress={() => router.push('/customer/book')} />
         <AppButton label="My profile" onPress={() => router.push('/customer/profile')} />
         <AppButton
           label="My vehicles"
@@ -46,8 +47,8 @@ export default function CustomerHomeScreen() {
       </View>
 
       <ThemedText themeColor="textSecondary">
-        Booking a spot — location and package selection, payment and receipt —
-        arrives in Phases 04-08.
+        Location and package selection are live. Submitting a booking, payment and
+        receipt arrive in Phases 05-08.
       </ThemedText>
 
       <View style={styles.spacer} />

@@ -7,6 +7,7 @@
  * curl transcript. Signed in as a `USER`, the same call answers 403; that is the
  * whole point of `requireRole` on the server.
  */
+import { router } from 'expo-router';
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
@@ -61,9 +62,14 @@ export default function AdminHomeScreen() {
       </View>
 
       <ThemedText themeColor="textSecondary">
-        Placeholder. Phases 04, 07 and 10 fill this stack in: booking approval queue, UPI
-        verification, cash approval, rates and locations, revenue and reports.
+        Phases 07 and 10 fill in the rest: booking approval queue, UPI verification, cash
+        approval, revenue and reports.
       </ThemedText>
+
+      <AppButton
+        label="Locations & rates"
+        onPress={() => router.push('/admin/locations')}
+      />
 
       <AppButton
         label="Check admin-only API"
