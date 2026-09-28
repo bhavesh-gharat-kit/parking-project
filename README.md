@@ -31,12 +31,25 @@ npm run db:seed                           # AppSetting defaults
 npm run dev:api                           # http://localhost:3000
 ```
 
+`AUTH_SECRET` is required — the API will not start without it:
+
+```bash
+openssl rand -base64 32
+```
+
 ```bash
 curl -s http://localhost:3000/api/health
 ```
 
 ```json
 {"ok":true,"data":{"status":"ok","database":"up","databaseLatencyMs":4,"version":"0.1.0","environment":"development","uptimeSeconds":6,"timestamp":"..."}}
+```
+
+Create the first admin — there is no in-app path to one, see
+[Authentication](#authentication):
+
+```bash
+npm run admin:create -- --email you@example.com --name "Your Name"
 ```
 
 **Mobile app**
@@ -53,9 +66,10 @@ npm run dev:mobile
 cd apps/mobile && npx eas-cli@latest build --profile development --platform android
 ```
 
-`npm run start:go -w mobile` will open in Expo Go instead, which is fine for the
-Phase 01 placeholder screens but will break as soon as Phase 02 adds Google
-Sign-In.
+`npm run start:go -w mobile` will open in Expo Go instead. Email/password sign-in
+works there, but the **Google button will not appear** — the native module is not in
+Expo Go, and `src/lib/google-auth.ts` hides the button rather than offering one that
+can only fail. Use the dev client to test Google sign-in.
 
 **Everything at once**
 
@@ -97,7 +111,7 @@ show for it. The root `package.json` scripts do the job:
 ```
 npm run dev:api        npm run db:migrate     npm run typecheck
 npm run dev:mobile     npm run db:seed        npm run lint
-npm run build:api      npm run db:studio
+npm run build:api      npm run db:studio      npm run admin:create
 ```
 
 **npm, not pnpm.** pnpm's symlinked store needs extra Metro configuration to
@@ -147,6 +161,127 @@ There is no generated API client (no tRPC, no OpenAPI codegen). Route handlers
 and the screens calling them are written in the same commit by the same person;
 the shared Zod schemas already pin down the contract, and a codegen step is
 another thing to keep running during launch week.
+
+---
+
+## Authentication
+
+Auth.js (NextAuth v5) on a **JWT session strategy** — `decisions.md` D3. No
+`Session` or `Account` tables: nothing needs persisting between requests beyond
+the `User` row.
+
+Two providers, both Credentials, both ending in the same token:
+
+| Provider | Credential | Checked by |
+|---|---|---|
+| `credentials` | email + password | bcrypt against `User.passwordHash` |
+| `google-mobile` | a Google **ID token** | `google-auth-library`, server-side |
+
+`google-mobile` is a Credentials provider rather than Auth.js's stock Google
+provider because that one is a browser OAuth redirect, and a React Native app has
+nowhere to come back to. The app runs the native Google flow itself, gets an ID
+token, and posts it; the backend verifies the signature against Google's keys and
+the `aud` against this project's own OAuth client IDs before reading a single
+claim (`apps/api/lib/auth/google.ts`).
+
+### Two transports, one token
+
+| Client | Carries the token as | Signs in via |
+|---|---|---|
+| Expo app | `Authorization: Bearer <token>` | `POST /api/auth/{register,login,google}` |
+| Phase 2 website | the `authjs.session-token` cookie | Auth.js's own `/api/auth/*` |
+
+The app does not use Auth.js's endpoints, because it cannot usefully: `signIn()`
+answers a browser with a redirect and a `Set-Cookie`, so a native client would have
+to post a CSRF double-submit pair to `/api/auth/callback/credentials`, follow a
+redirect it does not want, scrape `Set-Cookie`, and turn
+`?error=CredentialsSignin` back into a sentence a customer can read. Instead there
+are four small JSON handlers that call the *same* `lib/auth/users.ts` functions the
+`authorize` callbacks call, and mint the token directly.
+
+Both paths therefore produce the **identical** token. Auth.js JWTs are encrypted
+(JWE), with the key derived by HKDF from `AUTH_SECRET` and a salt that defaults to
+the session *cookie name* — so `lib/auth/session.ts` pins that name, `auth.ts`
+overrides Auth.js's cookie to match, and one `getToken()` call reads either
+transport. That is why `requireRole` authorises a browser cookie and a mobile
+Bearer header with no branch.
+
+One consequence worth knowing before the VPS gets its certificate: the cookie name
+depends on `AUTH_URL`'s scheme (`__Secure-` prefix on https), so **switching
+`AUTH_URL` from http to https invalidates every existing session**, exactly as
+rotating `AUTH_SECRET` would.
+
+### Where authorisation happens
+
+`role` lives in the JWT claims, and that copy is used for exactly one thing: the
+app choosing which navigation stack to open (context.txt §19). It is **not** what
+grants access.
+
+Every protected route handler calls `requireUser` / `requireRole` from
+[`apps/api/lib/auth/guard.ts`](apps/api/lib/auth/guard.ts), which verifies the
+token and then **re-reads the `User` row**. One primary-key read per request, and in
+exchange:
+
+- demoting an admin or disabling a user (§22) takes effect on their next request,
+  not whenever their 30-day token happens to expire;
+- promoting someone to `ADMIN` in MySQL works immediately server-side, and the app
+  picks the new role up from `GET /api/auth/me` on its next launch.
+
+The role is never read from a header, a body field or a query parameter anywhere in
+this codebase (context.txt §4). A tampered app build can open the admin *screens*;
+every admin *endpoint* still answers it 403.
+
+### The first admin
+
+There is deliberately no in-app path to `ADMIN` — no endpoint, no screen, no
+request field. New accounts get `USER` from the schema default. The first admin is
+made out of band:
+
+```bash
+npm run admin:create -- --email you@example.com --name "Your Name"
+```
+
+Existing account → promoted (and re-enabled if disabled), keeping the password it
+already has. New account → created, with a strong generated password printed once
+unless you pass `--password`.
+
+Not in `prisma/seed.ts`, because a seed runs on every deploy: a default admin there
+would be a known credential on the production VPS forever, and re-seeding could
+quietly reinstate an account the business had disabled. The script grants nothing
+that shell access to the VPS did not already grant — it just hashes the password
+properly instead of you writing `UPDATE User SET role = 'ADMIN'` by hand.
+
+### Verifying Phase 02
+
+With the API running:
+
+```bash
+npm run verify:auth -w api
+```
+
+19 checks: registration, duplicate email, a request that asks for `role: "ADMIN"`
+and gets `USER` anyway, sign-in, identical refusal messages for a wrong password
+and an unknown email, token tampering, and `403` for a `USER` calling
+`/api/admin/users` directly. Point it elsewhere with `API=https://… `. It leaves one
+throwaway `@example.invalid` account behind per run.
+
+Two things it cannot check, because they need a real device and a real Google
+account — do these by hand on the dev client:
+
+1. Sign in with Google, then confirm a matching row appears:
+   `SELECT email, googleId, role FROM User;`
+2. `UPDATE User SET role = 'ADMIN' WHERE email = '…';` then relaunch the app — it
+   should open the admin stack, and the "Check admin-only API" button there should
+   answer 200.
+
+### Not in Phase 02
+
+Password reset is a stub (`/forgot-password` says to contact the office) —
+`decisions.md` D1 puts the booking loop ahead of transactional email, and a
+half-built reset link is an account-takeover path. There is also **no rate limiting
+on sign-in**: doing it properly needs shared state, because PM2 runs more than one
+process (Phase 11), so an in-memory counter would be security theatre. Both are
+tracked for after Thursday.
 
 ---
 
@@ -239,10 +374,10 @@ mid-launch-week.
   The client never computes a price, never decides a status transition, and never
   sends an amount. The Phase 2 website has to reach the same answers from the
   same endpoints.
-- **`role` comes from the session JWT** and nothing else. The app has no code
-  path that grants admin access (context.txt §4); the Phase 01 role switcher on
-  the placeholder home screen only fills the client store so both navigation
-  stacks are reachable, and is deleted in Phase 02.
+- **The database decides `role`, and nothing else.** The app has no code path that
+  grants admin access (context.txt §4). The JWT's `role` claim picks a navigation
+  stack; `requireRole` re-reads the `User` row before allowing anything. See
+  [Authentication](#authentication).
 - **Anything a non-developer may need to change** — business name, UPI ID,
   receipt footer, parking prices — lives in the database (`AppSetting`,
   `ParkingRate`), not in `.env` and never in the APK. Changing a price must not
@@ -269,7 +404,7 @@ mid-launch-week.
 | Phase | Backend | Mobile |
 |---|---|---|
 | 01 Setup ✅ | schema, `/api/health`, `lib/` | stacks, stores, demo form |
-| 02 Auth | Auth.js v5, JWT, Google ID token verification | sign-in, role redirect, token storage |
+| 02 Auth ✅ | Auth.js v5, JWT, Google ID token verification, `requireRole` | sign-in/sign-up, role redirect, SecureStore token |
 | 03 Profile & vehicles | `User`/`Vehicle` CRUD | profile, vehicle forms |
 | 04 Locations & rates | admin CRUD, public reads, Kalyan seed | location + package pickers, admin rate screens |
 | 05 Booking flow | transition table, booking creation, expiry sweep | booking summary |

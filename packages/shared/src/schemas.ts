@@ -33,6 +33,19 @@ export const PasswordSchema = z
   .max(72, 'Password is too long'); // bcrypt truncates past 72 bytes
 
 /**
+ * A phone number that may legitimately be absent — a Google sign-up arrives
+ * without one (§4), and the sign-up form leaves the field blank.
+ *
+ * An empty string has to become `undefined` *before* `IndianPhoneSchema` runs,
+ * because that schema's `.refine` would otherwise reject `''` as an invalid
+ * number rather than treating it as "not supplied".
+ */
+export const OptionalIndianPhoneSchema = z.preprocess(
+  (value) => (typeof value === 'string' && value.trim() === '' ? undefined : value),
+  IndianPhoneSchema.optional(),
+);
+
+/**
  * Indian registration plate, stored without spaces or dashes: "MH04AB1234".
  * Deliberately permissive — BH-series, older formats and out-of-state plates all
  * have to be typeable at a parking counter, so this checks shape, not a registry.

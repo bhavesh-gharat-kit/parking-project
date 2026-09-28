@@ -20,6 +20,7 @@
     "@expo/ui": "~57.0.20",
     "@hookform/resolvers": "^5.2.3",
     "@parking/shared": "*",
+    "@react-native-google-signin/google-signin": "^16.1.5",
     "expo": "~57.0.25",
     "expo-constants": "~57.0.19",
     "expo-dev-client": "~57.0.19",

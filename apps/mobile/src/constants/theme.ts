@@ -14,6 +14,13 @@ export const Colors = {
     backgroundElement: '#F0F0F3',
     backgroundSelected: '#E0E1E6',
     textSecondary: '#60646C',
+    /** The brand blue, matching the adaptive icon and splash in app.config.ts. */
+    primary: '#0B5FA5',
+    /** Text and icons drawn on top of `primary`. */
+    onPrimary: '#ffffff',
+    /** Validation errors and destructive actions. */
+    danger: '#D92D20',
+    border: '#D7DAE0',
   },
   dark: {
     text: '#ffffff',
@@ -21,6 +28,12 @@ export const Colors = {
     backgroundElement: '#212225',
     backgroundSelected: '#2E3135',
     textSecondary: '#B0B4BA',
+    // Lightened from the light-mode blue: #0B5FA5 on a black background sits
+    // below the 4.5:1 contrast ratio a form label needs to stay readable.
+    primary: '#4C9FE0',
+    onPrimary: '#04131F',
+    danger: '#FF6B60',
+    border: '#3A3D42',
   },
 } as const;
 

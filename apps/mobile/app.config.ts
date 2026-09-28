@@ -68,6 +68,18 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     plugins: [
       'expo-router',
       'expo-secure-store',
+      /**
+       * Native Google Sign-In (decisions.md D3). Adding this changes the native
+       * project, so the dev client has to be rebuilt once — `npm run build:dev`.
+       *
+       * No props: `webClientId` is passed at runtime in
+       * `src/lib/google-auth.ts` from `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID`, which
+       * keeps it out of the committed config and lets the dev and launch builds
+       * point at different Google projects. Android needs no `google-services.json`
+       * for sign-in alone — only the OAuth clients in Google Cloud Console, whose
+       * Android entry must carry this build's package name and signing SHA-1.
+       */
+      '@react-native-google-signin/google-signin',
       [
         'expo-splash-screen',
         {

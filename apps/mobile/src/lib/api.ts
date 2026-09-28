@@ -7,8 +7,9 @@
  *  - The `ApiResponse` envelope from `@parking/shared` is unwrapped once, so a
  *    screen gets either data or an `ApiError`, never a discriminated union to
  *    re-check.
- *  - The auth token is attached in one place. Phase 02 fills in
- *    `getAuthToken` from the auth store; nothing else needs to change.
+ *  - The auth token is attached in one place, and an expired one is handled in
+ *    one place: a 401 signs the customer out rather than surfacing as a confusing
+ *    error on whichever screen happened to ask.
  *  - A dead network or a sleeping VPS becomes a typed error with a readable
  *    message rather than an unhandled promise rejection at a parking gate.
  */
@@ -37,12 +38,31 @@ export class ApiError extends Error {
 
 /**
  * Supplies the bearer token for authenticated calls (decisions.md D3).
- * Phase 02 replaces this with a read from the auth store / SecureStore.
+ *
+ * A provider function rather than an imported store value, so this module stays
+ * free of any dependency on Zustand or on the auth store — which itself imports
+ * `apiRequest`. `src/app/_layout.tsx` registers both hooks below at startup.
  */
 let getAuthToken: () => string | null = () => null;
 
 export function setAuthTokenProvider(provider: () => string | null) {
   getAuthToken = provider;
+}
+
+/**
+ * Called when the server rejects our token (401 / `UNAUTHORIZED`).
+ *
+ * Every screen from Phase 03 onward calls authenticated endpoints, and a 30-day
+ * token will eventually expire mid-session — or be invalidated by an admin
+ * disabling the account (context.txt §22), or by `AUTH_SECRET` rotating on the
+ * VPS. Handling it here means no screen has to recognise "my session died" as
+ * distinct from "this request failed"; the root layout wires this to sign-out, and
+ * the navigation guards take the customer back to sign-in.
+ */
+let onUnauthorized: () => void = () => {};
+
+export function setUnauthorizedHandler(handler: () => void) {
+  onUnauthorized = handler;
 }
 
 type RequestOptions = {
@@ -105,6 +125,13 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
   }
 
   if (!payload.ok) {
+    // Only for a request that actually sent a token. A 401 from a sign-in attempt
+    // means "wrong password" and must not trigger a sign-out — there is no session
+    // to end, and doing so would wipe a session the customer still had open.
+    if (!anonymous && payload.error.code === 'UNAUTHORIZED') {
+      onUnauthorized();
+    }
+
     throw new ApiError(payload.error.code, payload.error.message, response.status, payload.error.fields);
   }
 

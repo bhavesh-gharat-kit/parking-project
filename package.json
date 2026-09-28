@@ -20,7 +20,8 @@
     "db:generate": "npm run db:generate -w api",
     "db:migrate": "npm run db:migrate -w api",
     "db:studio": "npm run db:studio -w api",
-    "db:seed": "npm run db:seed -w api"
+    "db:seed": "npm run db:seed -w api",
+    "admin:create": "npm run admin:create -w api --"
   },
   "devDependencies": {
     "react": "19.2.3",
