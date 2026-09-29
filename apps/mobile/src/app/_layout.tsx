@@ -25,14 +25,29 @@
  * Both are registered at module scope, not in an effect: a screen could fire a
  * request during its first render, which happens before any effect runs.
  */
-import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
+import { DarkTheme, DefaultTheme, router, Stack, ThemeProvider } from 'expo-router';
+import * as Notifications from 'expo-notifications';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import { useColorScheme } from 'react-native';
 
-import { setAuthTokenProvider, setUnauthorizedHandler } from '@/lib/api';
+import type { RegisterPushTokenRequest } from '@parking/shared';
+
+import { apiRequest, setAuthTokenProvider, setUnauthorizedHandler } from '@/lib/api';
+import { extractBookingId, registerForPushNotificationsAsync } from '@/lib/push-notifications';
 import { useAuthStore } from '@/stores/auth-store';
+
+/**
+ * Opens the booking a tapped notification pointed at (decisions.md D4). The
+ * status/receipt screen at `/customer/bookings/[id]` already re-fetches on
+ * focus, so it shows whatever the booking's current state is — confirmed,
+ * rejected, or expired — regardless of which of the three pushes was tapped.
+ */
+function openNotifiedBooking(response: Notifications.NotificationResponse): void {
+  const bookingId = extractBookingId(response);
+  if (bookingId) router.push(`/customer/bookings/${bookingId}`);
+}
 
 setAuthTokenProvider(() => useAuthStore.getState().token);
 
@@ -60,6 +75,49 @@ export default function RootLayout() {
   useEffect(() => {
     if (status !== 'loading') void SplashScreen.hideAsync();
   }, [status]);
+
+  // Registers (or re-confirms) this device's push token once signed in. Cheap
+  // and idempotent on the backend (`POST /api/push-tokens` upserts on the token
+  // itself), so re-running it on every cold start that resolves to `signedIn` —
+  // not only a fresh sign-in — is fine and is what keeps `lastUsedAt`/`isActive`
+  // current for a device that was reinstalled or re-signed-in.
+  useEffect(() => {
+    if (status !== 'signedIn') return;
+
+    void (async () => {
+      const registered = await registerForPushNotificationsAsync();
+      if (!registered) return;
+
+      const body: RegisterPushTokenRequest = {
+        token: registered.token,
+        platform: registered.platform,
+        deviceName: registered.deviceName ?? undefined,
+      };
+
+      try {
+        await apiRequest('/api/push-tokens', { method: 'POST', body });
+      } catch (error) {
+        // A convenience notification failing to register must never block the
+        // app (decisions.md D4) — log and move on.
+        console.warn('[push] could not register the push token with the server:', error);
+      }
+    })();
+  }, [status]);
+
+  // Tapped-notification deep link: the listener covers a tap while the app is
+  // foregrounded or backgrounded, and `getLastNotificationResponseAsync` covers
+  // a tap that cold-started the app (that response would otherwise be missed,
+  // since the listener is not attached yet when it happened).
+  useEffect(() => {
+    void Notifications.getLastNotificationResponseAsync().then((response) => {
+      if (response) openNotifiedBooking(response);
+    });
+
+    const subscription = Notifications.addNotificationResponseReceivedListener(
+      openNotifiedBooking,
+    );
+    return () => subscription.remove();
+  }, []);
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>

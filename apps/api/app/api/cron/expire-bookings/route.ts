@@ -42,6 +42,7 @@ import { transitionBooking } from '@/lib/bookings/transitions';
 import { prisma } from '@/lib/db';
 import { env } from '@/lib/env';
 import { fail, ok } from '@/lib/http';
+import { sendBookingPush } from '@/lib/push/send';
 import { getBookingExpiryMinutes } from '@/lib/settings';
 
 export const runtime = 'nodejs';
@@ -105,7 +106,7 @@ export async function POST(req: NextRequest) {
       status: { in: [...SWEEPABLE_BOOKING_STATUSES] },
       expiresAt: { not: null, lte: sweptAt },
     },
-    select: { id: true, bookingNumber: true },
+    select: { id: true, bookingNumber: true, userId: true },
     orderBy: { expiresAt: 'asc' },
     take: BATCH_LIMIT,
   });
@@ -128,6 +129,13 @@ export async function POST(req: NextRequest) {
 
     if (result.ok) {
       expired += 1;
+      // Fire-and-forget (decisions.md D4): `sendBookingPush` never throws, and one
+      // dead token or an Expo outage must not stall the sweep's next candidate.
+      void sendBookingPush(candidate.userId, {
+        title: 'Booking expired',
+        body: `Your booking ${candidate.bookingNumber} expired.`,
+        bookingId: candidate.id,
+      });
       continue;
     }
 
@@ -139,10 +147,6 @@ export async function POST(req: NextRequest) {
       );
     }
   }
-
-  // Phase 09 (decisions.md D4) sends the "your booking expired" push here, from
-  // the ids collected above — the sweep is the only place that knows which
-  // bookings just lapsed.
 
   if (expired > 0) {
     console.log(`[cron/expire-bookings] expired ${expired}/${candidates.length} booking(s).`);

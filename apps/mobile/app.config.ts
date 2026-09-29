@@ -88,6 +88,14 @@ export default ({ config }: ConfigContext): ExpoConfig => {
           imageWidth: 96,
         },
       ],
+      /**
+       * Expo push notifications (Phase 09, decisions.md D4). No icon/color/sound
+       * props: the launch APK uses Android's default notification look, which is
+       * fine for the minimal "booking confirmed/rejected/expired" pushes this
+       * phase sends. Adding this plugin changes the native project, so the dev
+       * client needs one rebuild — `npm run build:dev`.
+       */
+      'expo-notifications',
     ],
 
     experiments: {

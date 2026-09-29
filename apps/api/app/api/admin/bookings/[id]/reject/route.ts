@@ -21,6 +21,7 @@ import { ADMIN_BOOKING_RELATIONS, toAdminBooking } from '@/lib/bookings/projecti
 import { transitionBooking, transitionFailureMessage } from '@/lib/bookings/transitions';
 import { prisma } from '@/lib/db';
 import { fail, ok } from '@/lib/http';
+import { sendBookingPush } from '@/lib/push/send';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -54,6 +55,14 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
     if (result.reason === 'NO_PAYMENT') return fail('CONFLICT', message);
     return fail('INVALID_STATE_TRANSITION', message);
   }
+
+  // Fire-and-forget (decisions.md D4): `sendBookingPush` catches everything
+  // itself and never throws, and this response should not wait on Expo's API.
+  void sendBookingPush(result.booking.userId, {
+    title: 'Booking rejected',
+    body: `Your booking ${result.booking.bookingNumber} was rejected.`,
+    bookingId: result.booking.id,
+  });
 
   const booking = await prisma.booking.findUniqueOrThrow({
     where: { id: result.booking.id },
