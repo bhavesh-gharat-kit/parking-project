@@ -8,7 +8,7 @@
  * request time.
  */
 import type { Prisma } from '@/generated/prisma/client';
-import type { Booking, BookingPayment } from '@parking/shared';
+import type { AdminBooking, Booking, BookingPayment } from '@parking/shared';
 
 /**
  * The only two relations the DTO needs.
@@ -99,5 +99,31 @@ export function toBooking(row: BookingWithRelations): Booking {
 
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
+  };
+}
+
+/**
+ * Phase 07's admin queue and detail screens need one relation `toBooking`'s
+ * customers never do: who the booking belongs to (§21's customer-name search
+ * and display).
+ */
+export const ADMIN_BOOKING_RELATIONS = {
+  ...BOOKING_RELATIONS,
+  user: { select: { id: true, name: true, email: true, phone: true } },
+} as const satisfies Prisma.BookingInclude;
+
+export type AdminBookingWithRelations = Prisma.BookingGetPayload<{
+  include: typeof ADMIN_BOOKING_RELATIONS;
+}>;
+
+export function toAdminBooking(row: AdminBookingWithRelations): AdminBooking {
+  return {
+    ...toBooking(row),
+    customer: {
+      id: row.user.id,
+      name: row.user.name,
+      email: row.user.email,
+      phone: row.user.phone,
+    },
   };
 }

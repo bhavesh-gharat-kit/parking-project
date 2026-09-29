@@ -105,6 +105,20 @@ export function formatIstRange(start: Date | string, end: Date | string): string
 }
 
 /**
+ * The IST calendar day `"2026-09-28"` as its `[start, end]` instants, inclusive.
+ *
+ * Turns an admin's date-range filter (§21, Phase 07) into UTC instants Prisma can
+ * compare a column against — the fixed `+05:30` offset is parsed directly by
+ * `Date`, so this needs no more arithmetic than `istParts` above does.
+ */
+export function istDayBounds(dateStamp: string): { start: Date; end: Date } {
+  return {
+    start: new Date(`${dateStamp}T00:00:00.000+05:30`),
+    end: new Date(`${dateStamp}T23:59:59.999+05:30`),
+  };
+}
+
+/**
  * `9:58` — a countdown for the §15 expiry window, floored at zero.
  *
  * Floored rather than allowed to go negative because the sweep runs on a timer:
