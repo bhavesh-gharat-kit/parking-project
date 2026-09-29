@@ -35,6 +35,7 @@ import {
   formatInr,
   formatIstDateTime,
   isCustomerCancellable,
+  isReceiptEligible,
   isTerminalBookingStatus,
   type Booking,
   type BookingStatus,
@@ -282,6 +283,13 @@ export default function BookingSummaryScreen() {
             Pay the amount in cash at the parking location. An admin will confirm
             your booking once payment is received.
           </ThemedText>
+        ) : null}
+
+        {isReceiptEligible(booking.status) ? (
+          <AppButton
+            label="View receipt"
+            onPress={() => router.push(`/customer/bookings/${booking.id}/receipt`)}
+          />
         ) : null}
 
         {isCustomerCancellable(booking.status) ? (

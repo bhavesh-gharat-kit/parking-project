@@ -7,9 +7,8 @@
  * be seen in the seconds after it is made is not a working flow.
  *
  * So this is deliberately the plain version: one page of bookings, newest first,
- * tapping through to the summary. §16's full history — filters, the receipt link
- * (§17), paging — belongs to Phase 08, which is where the receipt it should link
- * to gets built.
+ * tapping through to the summary, with Phase 08's receipt link on any row that
+ * has one. §16's full history — filters, paging — is still out of scope.
  *
  * Both statuses are on the row. They move independently (§14, §32): a UPI
  * booking reads "Payment Verification · Verification Pending" and a cash one
@@ -25,6 +24,7 @@ import {
   PAYMENT_STATUS_LABELS,
   formatInr,
   formatIstDateTime,
+  isReceiptEligible,
   type Booking,
   type BookingStatus,
   type Paginated,
@@ -115,6 +115,16 @@ export default function BookingsScreen() {
                 {BOOKING_STATUS_LABELS[item.status]}
                 {item.payment ? ` · Payment: ${PAYMENT_STATUS_LABELS[item.payment.status]}` : ''}
               </ThemedText>
+              {isReceiptEligible(item.status) ? (
+                <Pressable
+                  onPress={() => router.push(`/customer/bookings/${item.id}/receipt`)}
+                  hitSlop={8}
+                >
+                  <ThemedText type="small" themeColor="primary">
+                    View receipt
+                  </ThemedText>
+                </Pressable>
+              ) : null}
             </Pressable>
           )}
         />

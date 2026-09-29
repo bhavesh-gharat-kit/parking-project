@@ -71,3 +71,13 @@ export async function getBookingExpiryMinutes(): Promise<number> {
 export async function getGlobalUpiVpa(): Promise<string | null> {
   return readSetting(SETTING_KEYS.upiVpa);
 }
+
+/** §17 — the receipt header. Falls back to the seed's own default name. */
+export async function getBusinessName(): Promise<string> {
+  return (await readSetting(SETTING_KEYS.businessName)) ?? 'Pay & Park';
+}
+
+/** §17 — the receipt footer, `null` if the admin has not set one yet. */
+export async function getSupportPhone(): Promise<string | null> {
+  return readSetting(SETTING_KEYS.supportPhone);
+}

@@ -32,6 +32,7 @@ export default function CustomerLayout() {
       <Stack.Screen name="bookings/[id]/index" options={{ title: 'Booking Summary' }} />
       <Stack.Screen name="bookings/[id]/payment" options={{ title: 'Choose Payment Method' }} />
       <Stack.Screen name="bookings/[id]/upi" options={{ title: 'Pay via UPI' }} />
+      <Stack.Screen name="bookings/[id]/receipt" options={{ title: 'Receipt' }} />
     </Stack>
   );
 }
