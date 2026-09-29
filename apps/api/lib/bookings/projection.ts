@@ -19,12 +19,15 @@ import type { Booking, BookingPayment } from '@parking/shared';
  * and the snapshot block in `schema.prisma`).
  */
 export const BOOKING_RELATIONS = {
-  location: { select: { id: true, name: true, addressLine: true, city: true } },
+  location: {
+    select: { id: true, name: true, addressLine: true, city: true, upiQrImageUrl: true },
+  },
   payment: {
     select: {
       method: true,
       status: true,
       amountInPaise: true,
+      upiPayeeVpa: true,
       upiUtr: true,
       paidAt: true,
     },
@@ -47,6 +50,7 @@ function toBookingPayment(
     method: payment.method,
     status: payment.status,
     amountInPaise: payment.amountInPaise,
+    upiPayeeVpa: payment.upiPayeeVpa,
     upiUtr: payment.upiUtr,
     paidAt: payment.paidAt?.toISOString() ?? null,
   };
@@ -67,6 +71,7 @@ export function toBooking(row: BookingWithRelations): Booking {
       name: row.location.name,
       addressLine: row.location.addressLine,
       city: row.location.city,
+      upiQrImageUrl: row.location.upiQrImageUrl,
     },
 
     vehicleId: row.vehicleId,

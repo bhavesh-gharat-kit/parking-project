@@ -62,6 +62,8 @@ export default function AdminLocationFormScreen() {
       contactPhone: '',
       capacity: '',
       isActive: true,
+      upiVpa: '',
+      upiQrImageUrl: '',
     },
   });
 
@@ -83,6 +85,8 @@ export default function AdminLocationFormScreen() {
           contactPhone: location.contactPhone ?? '',
           capacity: location.capacity == null ? '' : String(location.capacity),
           isActive: location.isActive,
+          upiVpa: location.upiVpa ?? '',
+          upiQrImageUrl: location.upiQrImageUrl ?? '',
         });
       } catch (error) {
         if (cancelled) return;
@@ -213,6 +217,30 @@ export default function AdminLocationFormScreen() {
               placeholder="e.g. 50"
               keyboardType="number-pad"
               hint="Optional headcount, shown on the admin dashboard."
+              returnKeyType="next"
+            />
+
+            <TextField
+              control={control}
+              name="upiVpa"
+              label="UPI ID"
+              placeholder="business@okhdfcbank"
+              autoCapitalize="none"
+              autoCorrect={false}
+              keyboardType="email-address"
+              hint="Optional — shown on the customer's UPI payment screen (§11)."
+              returnKeyType="next"
+            />
+
+            <TextField
+              control={control}
+              name="upiQrImageUrl"
+              label="UPI QR code image URL"
+              placeholder="https://example.com/kalyan-upi-qr.png"
+              autoCapitalize="none"
+              autoCorrect={false}
+              keyboardType="url"
+              hint="Optional — a static QR image the app displays for UPI payment."
               returnKeyType="done"
               onSubmitEditing={handleSubmit(onSubmit)}
             />

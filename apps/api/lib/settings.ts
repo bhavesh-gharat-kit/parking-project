@@ -61,3 +61,13 @@ export async function getBookingExpiryMinutes(): Promise<number> {
 
   return parsed;
 }
+
+/**
+ * §11 — the business-wide UPI ID, used when a `ParkingLocation` has none of its
+ * own set. `null` means neither is configured, which the payment-method
+ * endpoint treats as "no VPA to show" rather than a hard error — a branch that
+ * only takes cash for now must not be blocked from opening.
+ */
+export async function getGlobalUpiVpa(): Promise<string | null> {
+  return readSetting(SETTING_KEYS.upiVpa);
+}

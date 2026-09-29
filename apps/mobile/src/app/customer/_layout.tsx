@@ -29,7 +29,9 @@ export default function CustomerLayout() {
       <Stack.Screen name="book/[locationId]/index" options={{ title: 'Choose a Vehicle' }} />
       <Stack.Screen name="book/[locationId]/package" options={{ title: 'Choose a Package' }} />
       <Stack.Screen name="bookings/index" options={{ title: 'My Bookings' }} />
-      <Stack.Screen name="bookings/[id]" options={{ title: 'Booking Summary' }} />
+      <Stack.Screen name="bookings/[id]/index" options={{ title: 'Booking Summary' }} />
+      <Stack.Screen name="bookings/[id]/payment" options={{ title: 'Choose Payment Method' }} />
+      <Stack.Screen name="bookings/[id]/upi" options={{ title: 'Pay via UPI' }} />
     </Stack>
   );
 }

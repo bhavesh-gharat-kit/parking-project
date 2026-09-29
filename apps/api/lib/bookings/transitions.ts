@@ -76,6 +76,25 @@ export type TransitionRequest = {
     paidAt?: Date;
     /** Stamps `Payment.verifiedById`/`verifiedAt` from the acting admin. */
     recordVerifier?: boolean;
+    /**
+     * Phase 06 — the UPI reference the customer submitted. Stamps
+     * `Payment.utrSubmittedAt` alongside it. Never, by itself, moves `status` to
+     * `PAID` (§32) — that is `payment.to`'s job, and this transition's `to` is
+     * `VERIFICATION_PENDING`, set explicitly by the caller.
+     */
+    upiUtr?: string;
+    /**
+     * Phase 06 — creates the `Payment` row when the booking has none yet, i.e.
+     * the customer is selecting UPI or cash for the first time. Ignored if
+     * `current.payment` already exists (a retried request updates it instead,
+     * same as any other move).
+     */
+    create?: {
+      method: PaymentMethod;
+      amountInPaise: number;
+      /** §11 — the VPA shown on the payment screen, `null` for a `CASH` booking. */
+      upiPayeeVpa?: string | null;
+    };
   };
   actor: TransitionActor;
   /** Goes on the audit row, and on `reviewNote` if `data.reviewNote` is unset. */
@@ -154,19 +173,27 @@ export async function transitionBooking(request: TransitionRequest): Promise<Tra
     }
 
     let paymentFrom: PaymentStatus | null = null;
+    // True only when this call is the one creating the `Payment` row (Phase 06's
+    // method selection) — `current.payment` is absent and `payment.create` was
+    // supplied, so there is no prior status to check a transition against.
+    let creatingPayment = false;
     if (payment) {
-      if (!current.payment) return { ok: false, reason: 'NO_PAYMENT' } as const;
-
-      paymentFrom = current.payment.status;
-      // A no-op payment move (PAID → PAID on a retried request) is allowed
-      // through; the table only governs actual changes.
-      if (paymentFrom !== payment.to && !canTransitionPayment(paymentFrom, payment.to)) {
-        return {
-          ok: false,
-          reason: 'ILLEGAL_PAYMENT_STATUS',
-          from: paymentFrom,
-          to: payment.to,
-        } as const;
+      if (current.payment) {
+        paymentFrom = current.payment.status;
+        // A no-op payment move (PAID → PAID on a retried request) is allowed
+        // through; the table only governs actual changes.
+        if (paymentFrom !== payment.to && !canTransitionPayment(paymentFrom, payment.to)) {
+          return {
+            ok: false,
+            reason: 'ILLEGAL_PAYMENT_STATUS',
+            from: paymentFrom,
+            to: payment.to,
+          } as const;
+        }
+      } else if (payment.create) {
+        creatingPayment = true;
+      } else {
+        return { ok: false, reason: 'NO_PAYMENT' } as const;
       }
     }
 
@@ -212,11 +239,28 @@ export async function transitionBooking(request: TransitionRequest): Promise<Tra
 
     if (updated.count === 0) return { ok: false, reason: 'RACED', from } as const;
 
-    if (payment && current.payment && paymentFrom !== null) {
+    if (payment && creatingPayment && payment.create) {
+      // Phase 06 — the booking had no `Payment` row until now: the customer just
+      // picked UPI or cash. `status` starts at `payment.to` directly (`PENDING`)
+      // rather than going through `tx.payment.update`, since there is no prior
+      // row to transition.
+      await tx.payment.create({
+        data: {
+          bookingId,
+          method: payment.create.method,
+          status: payment.to,
+          amountInPaise: payment.create.amountInPaise,
+          upiPayeeVpa: payment.create.upiPayeeVpa ?? null,
+          ...(payment.upiUtr ? { upiUtr: payment.upiUtr, utrSubmittedAt: now } : {}),
+          ...(payment.to === 'PAID' ? { paidAt: payment.paidAt ?? now } : {}),
+        },
+      });
+    } else if (payment && current.payment && paymentFrom !== null) {
       await tx.payment.update({
         where: { id: current.payment.id },
         data: {
           status: payment.to,
+          ...(payment.upiUtr ? { upiUtr: payment.upiUtr, utrSubmittedAt: now } : {}),
           ...(payment.to === 'PAID' ? { paidAt: payment.paidAt ?? now } : {}),
           ...(payment.to === 'REFUNDED' ? { refundedAt: now } : {}),
           ...(payment.recordVerifier

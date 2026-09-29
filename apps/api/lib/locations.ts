@@ -27,6 +27,8 @@ export function toAdminParkingLocation(location: ParkingLocationRow): AdminParki
     code: location.code,
     capacity: location.capacity,
     isActive: location.isActive,
+    upiVpa: location.upiVpa,
+    upiQrImageUrl: location.upiQrImageUrl,
     createdAt: location.createdAt.toISOString(),
     updatedAt: location.updatedAt.toISOString(),
   };

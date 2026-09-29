@@ -71,4 +71,17 @@ export const UpiUtrSchema = z
   .transform((value) => value.replace(/\s/g, ''))
   .refine((value) => /^[A-Z0-9]{8,24}$/.test(value), 'Enter the UPI reference exactly as shown in your payment app');
 
+/** A UPI VPA / payment address, e.g. "business@okhdfcbank" (§11, Phase 06). */
+export const UpiVpaSchema = z
+  .string()
+  .trim()
+  .toLowerCase()
+  .regex(/^[a-z0-9.\-_]{2,256}@[a-z][a-z0-9]{1,64}$/, 'Enter a valid UPI ID, e.g. name@bank');
+
+/** Same "empty string means not supplied" convention as `OptionalIndianPhoneSchema`. */
+export const OptionalUpiVpaSchema = z.preprocess(
+  (value) => (typeof value === 'string' && value.trim() === '' ? undefined : value),
+  UpiVpaSchema.optional(),
+);
+
 export const CuidSchema = z.string().min(1, 'Required');

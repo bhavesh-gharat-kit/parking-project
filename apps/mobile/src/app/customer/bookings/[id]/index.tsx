@@ -250,9 +250,37 @@ export default function BookingSummaryScreen() {
         </View>
 
         {booking.status === 'PENDING' ? (
+          <AppButton
+            label="Choose payment method"
+            onPress={() => router.push(`/customer/bookings/${booking.id}/payment`)}
+          />
+        ) : null}
+
+        {booking.status === 'PENDING_PAYMENT' ? (
+          <>
+            <ThemedText type="small" themeColor="textSecondary">
+              Scan the QR, pay the amount, then submit your UPI reference (UTR) so
+              we can verify it.
+            </ThemedText>
+            <AppButton
+              label="Pay via UPI"
+              onPress={() => router.push(`/customer/bookings/${booking.id}/upi`)}
+            />
+          </>
+        ) : null}
+
+        {booking.status === 'PAYMENT_VERIFICATION' ? (
           <ThemedText type="small" themeColor="textSecondary">
-            Choosing how to pay — UPI or cash at the parking — arrives in the next
-            release. Until then an admin can confirm this booking at the gate.
+            We&apos;ve received your UPI reference and are checking it against our
+            bank statement. This is not yet confirmed — pull to refresh for
+            updates.
+          </ThemedText>
+        ) : null}
+
+        {booking.status === 'PENDING_APPROVAL' ? (
+          <ThemedText type="small" themeColor="textSecondary">
+            Pay the amount in cash at the parking location. An admin will confirm
+            your booking once payment is received.
           </ThemedText>
         ) : null}
 

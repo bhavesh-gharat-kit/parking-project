@@ -61,6 +61,8 @@ export async function POST(req: NextRequest) {
         contactPhone: body.data.contactPhone ?? null,
         capacity: body.data.capacity ?? null,
         isActive: body.data.isActive,
+        upiVpa: body.data.upiVpa ?? null,
+        upiQrImageUrl: body.data.upiQrImageUrl ?? null,
       },
     });
 

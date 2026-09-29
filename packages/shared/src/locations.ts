@@ -9,7 +9,13 @@
  */
 import { z } from 'zod';
 
-import { OptionalIndianPhoneSchema } from './schemas';
+import { OptionalIndianPhoneSchema, OptionalUpiVpaSchema } from './schemas';
+
+/** Empty string means "not supplied", same convention as `OptionalIndianPhoneSchema`. */
+const OptionalUrlSchema = z.preprocess(
+  (value) => (typeof value === 'string' && value.trim() === '' ? undefined : value),
+  z.string().trim().url('Enter a valid image URL').max(2048).optional(),
+);
 
 /** Branch code prefix used on a booking number, e.g. "KLY" (§17, Phase 05). */
 export const ParkingLocationCodeSchema = z
@@ -37,6 +43,10 @@ export const ParkingLocationRequestSchema = z.object({
   ),
   /** §6, §23 — an inactive location disappears from the customer's list. */
   isActive: z.boolean().default(true),
+  /** §11, Phase 06 — the VPA shown on this branch's UPI payment screen. */
+  upiVpa: OptionalUpiVpaSchema,
+  /** §11, Phase 06 — the static QR image the app displays for UPI payment. */
+  upiQrImageUrl: OptionalUrlSchema,
 });
 export type ParkingLocationRequest = z.input<typeof ParkingLocationRequestSchema>;
 export type ParkingLocationRequestParsed = z.output<typeof ParkingLocationRequestSchema>;
@@ -58,6 +68,9 @@ export const AdminParkingLocationSchema = ParkingLocationSchema.extend({
   code: z.string(),
   capacity: z.number().nullable(),
   isActive: z.boolean(),
+  /** §11, Phase 06 — null until the admin configures this branch's UPI payment. */
+  upiVpa: z.string().nullable(),
+  upiQrImageUrl: z.string().nullable(),
   createdAt: z.string(),
   updatedAt: z.string(),
 });

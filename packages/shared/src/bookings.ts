@@ -69,7 +69,7 @@ import {
   type BookingStatus,
   type PaymentStatus,
 } from './enums';
-import { CuidSchema } from './schemas';
+import { CuidSchema, UpiUtrSchema } from './schemas';
 
 /* ═══════════════════════════ Booking transitions ═══════════════════════════ */
 
@@ -258,6 +258,32 @@ export const BookingCancelRequestSchema = z.object({
 });
 export type BookingCancelRequest = z.input<typeof BookingCancelRequestSchema>;
 
+/**
+ * `POST /api/bookings/:id/payment-method` (context.txt §368-374, Phase 06).
+ *
+ * `UPI` moves the booking to `PENDING_PAYMENT` and `CASH` to
+ * `PENDING_APPROVAL` — the branch is entirely the backend's, from
+ * `BOOKING_TRANSITIONS`, so a tampered value here can only ever select a legal
+ * status for `PENDING`, never invent one.
+ */
+export const BookingPaymentMethodRequestSchema = z.object({
+  method: PaymentMethodSchema,
+});
+export type BookingPaymentMethodRequest = z.input<typeof BookingPaymentMethodRequestSchema>;
+
+/**
+ * `POST /api/bookings/:id/utr` (context.txt §306-336, Phase 06).
+ *
+ * Submitting this NEVER marks the payment `PAID` — see the header of
+ * `apps/api/lib/bookings/transitions.ts`. It only moves the booking to
+ * `PAYMENT_VERIFICATION` so an admin can check it (Phase 07).
+ */
+export const BookingUtrSubmitRequestSchema = z.object({
+  utr: UpiUtrSchema,
+});
+export type BookingUtrSubmitRequest = z.input<typeof BookingUtrSubmitRequestSchema>;
+export type BookingUtrSubmitRequestParsed = z.output<typeof BookingUtrSubmitRequestSchema>;
+
 /* ═════════════════════════════ Responses ══════════════════════════════════ */
 
 /** The branch a booking was made at, denormalised for the summary and receipt. */
@@ -266,6 +292,13 @@ export const BookingLocationSchema = z.object({
   name: z.string(),
   addressLine: z.string(),
   city: z.string(),
+  /**
+   * §11, Phase 06 — the static QR image for this branch's UPI payment screen.
+   * Read live off the location (unlike `Payment.upiPayeeVpa`, this is not
+   * snapshotted: it is just an image reference, not something a reconciliation
+   * report depends on staying frozen).
+   */
+  upiQrImageUrl: z.string().nullable(),
 });
 
 /**
@@ -281,6 +314,13 @@ export const BookingPaymentSchema = z.object({
   method: PaymentMethodSchema,
   status: PaymentStatusSchema,
   amountInPaise: z.number(),
+  /**
+   * §11 — the VPA the customer was shown on the payment screen, snapshotted at
+   * the moment `UPI` was selected so a later change to the branch's UPI ID does
+   * not rewrite what this booking says it asked for. `null` for a `CASH`
+   * booking.
+   */
+  upiPayeeVpa: z.string().nullable(),
   /** §11 — the reference the customer read off their UPI app. A claim, not proof. */
   upiUtr: z.string().nullable(),
   paidAt: z.string().nullable(),
