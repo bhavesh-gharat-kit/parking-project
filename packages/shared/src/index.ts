@@ -10,5 +10,6 @@ export * from './rates';
 export * from './datetime';
 export * from './bookings';
 export * from './admin';
+export * from './dashboard';
 export * from './receipts';
 export * from './push';

@@ -5,6 +5,11 @@
  * approval queue, UPI verification, cash approval and user management. Phase
  * 10 adds the dashboard and reports.
  *
+ * `reports/index` is a separate screen from `index` (the dashboard) rather
+ * than a tab on it (context.txt §20 vs §26): the dashboard is "right now", the
+ * reports screen is "over a date range" — deliberately different questions
+ * with deliberately different filters.
+ *
  * The `'ADMIN'` guard is a convenience — it keeps a customer from reaching screens
  * that would only show them failed requests. It is emphatically not what makes
  * these features safe: every admin endpoint authorises server-side off the
@@ -29,6 +34,7 @@ export default function AdminLayout() {
       <Stack.Screen name="locations/[id]/rates/[rateId]" options={{ title: 'Rate' }} />
       <Stack.Screen name="bookings/index" options={{ title: 'Bookings' }} />
       <Stack.Screen name="bookings/[id]/index" options={{ title: 'Booking' }} />
+      <Stack.Screen name="reports/index" options={{ title: 'Reports' }} />
       <Stack.Screen name="users/index" options={{ title: 'Users' }} />
       <Stack.Screen name="users/[id]/index" options={{ title: 'User' }} />
     </Stack>
