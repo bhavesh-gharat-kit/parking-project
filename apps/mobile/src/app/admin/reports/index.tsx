@@ -10,7 +10,8 @@
  */
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, TextInput, View } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 
 import {
   PAYMENT_METHODS,
@@ -73,7 +74,11 @@ export default function AdminReportsScreen() {
   );
 
   return (
-    <ScrollView style={{ backgroundColor: theme.background }} contentContainerStyle={styles.container}>
+    <KeyboardAwareScrollView
+      style={{ backgroundColor: theme.background }}
+      contentContainerStyle={styles.container}
+      bottomOffset={Spacing.four}
+    >
       <ThemedText type="subtitle">Reports</ThemedText>
 
       <View style={styles.filterRow}>
@@ -170,7 +175,7 @@ export default function AdminReportsScreen() {
           </ThemedText>
         </View>
       ) : null}
-    </ScrollView>
+    </KeyboardAwareScrollView>
   );
 }
 

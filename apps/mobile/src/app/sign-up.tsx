@@ -12,7 +12,8 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { Link, router } from 'expo-router';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 
 import {
   RegisterRequestSchema,
@@ -56,94 +57,94 @@ export default function SignUpScreen() {
   };
 
   return (
-    <KeyboardAvoidingView
+    <KeyboardAwareScrollView
       style={[styles.flex, { backgroundColor: theme.background }]}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      contentContainerStyle={styles.content}
+      keyboardShouldPersistTaps="handled"
+      bottomOffset={Spacing.four}
     >
-      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-        <View style={styles.header}>
-          <ThemedText type="subtitle">Create account</ThemedText>
-          <ThemedText themeColor="textSecondary">
-            You will need this to book parking and get your receipt.
+      <View style={styles.header}>
+        <ThemedText type="subtitle">Create account</ThemedText>
+        <ThemedText themeColor="textSecondary">
+          You will need this to book parking and get your receipt.
+        </ThemedText>
+      </View>
+
+      {formError ? (
+        <View style={[styles.banner, { backgroundColor: theme.backgroundElement, borderColor: theme.danger }]}>
+          <ThemedText type="small" themeColor="danger">
+            {formError}
           </ThemedText>
         </View>
+      ) : null}
 
-        {formError ? (
-          <View style={[styles.banner, { backgroundColor: theme.backgroundElement, borderColor: theme.danger }]}>
-            <ThemedText type="small" themeColor="danger">
-              {formError}
-            </ThemedText>
-          </View>
-        ) : null}
+      <TextField
+        control={control}
+        name="name"
+        label="Full name"
+        placeholder="Ramesh Patil"
+        autoCapitalize="words"
+        autoComplete="name"
+        textContentType="name"
+        returnKeyType="next"
+      />
 
-        <TextField
-          control={control}
-          name="name"
-          label="Full name"
-          placeholder="Ramesh Patil"
-          autoCapitalize="words"
-          autoComplete="name"
-          textContentType="name"
-          returnKeyType="next"
-        />
+      <TextField
+        control={control}
+        name="email"
+        label="Email"
+        placeholder="you@example.com"
+        keyboardType="email-address"
+        autoCapitalize="none"
+        autoComplete="email"
+        autoCorrect={false}
+        textContentType="emailAddress"
+        returnKeyType="next"
+      />
 
-        <TextField
-          control={control}
-          name="email"
-          label="Email"
-          placeholder="you@example.com"
-          keyboardType="email-address"
-          autoCapitalize="none"
-          autoComplete="email"
-          autoCorrect={false}
-          textContentType="emailAddress"
-          returnKeyType="next"
-        />
+      <TextField
+        control={control}
+        name="phone"
+        label="Mobile number"
+        placeholder="98765 43210"
+        keyboardType="phone-pad"
+        autoComplete="tel"
+        textContentType="telephoneNumber"
+        returnKeyType="next"
+        hint="Optional. Printed on your parking receipt."
+      />
 
-        <TextField
-          control={control}
-          name="phone"
-          label="Mobile number"
-          placeholder="98765 43210"
-          keyboardType="phone-pad"
-          autoComplete="tel"
-          textContentType="telephoneNumber"
-          returnKeyType="next"
-          hint="Optional. Printed on your parking receipt."
-        />
+      <TextField
+        control={control}
+        name="password"
+        label="Password"
+        placeholder="At least 8 characters"
+        secureTextEntry
+        autoCapitalize="none"
+        autoComplete="new-password"
+        textContentType="newPassword"
+        returnKeyType="done"
+        onSubmitEditing={handleSubmit(onSubmit)}
+      />
 
-        <TextField
-          control={control}
-          name="password"
-          label="Password"
-          placeholder="At least 8 characters"
-          secureTextEntry
-          autoCapitalize="none"
-          autoComplete="new-password"
-          textContentType="newPassword"
-          returnKeyType="done"
-          onSubmitEditing={handleSubmit(onSubmit)}
-        />
+      <AppButton
+        label="Create account"
+        onPress={handleSubmit(onSubmit)}
+        loading={isSubmitting}
+        disabled={isSubmitting}
+      />
 
-        <AppButton
-          label="Create account"
-          onPress={handleSubmit(onSubmit)}
-          loading={isSubmitting}
-          disabled={isSubmitting}
-        />
-
-        <View style={styles.footer}>
-          <ThemedText type="small" themeColor="textSecondary">
-            Already have an account?
+      <View style={styles.footer}>
+        <ThemedText type="small" themeColor="textSecondary">
+          Already have an account?
+        </ThemedText>
+        <Link href="/sign-in" asChild>
+          <ThemedText type="small" themeColor="primary">
+            Sign in
           </ThemedText>
-          <Link href="/sign-in" asChild>
-            <ThemedText type="small" themeColor="primary">
-              Sign in
-            </ThemedText>
-          </Link>
-        </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+        </Link>
+      </View>
+    </KeyboardAwareScrollView>
   );
 }
 

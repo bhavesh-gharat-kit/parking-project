@@ -14,7 +14,8 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 
 import {
   UpdateProfileRequestSchema,
@@ -65,70 +66,70 @@ export default function ProfileScreen() {
   };
 
   return (
-    <KeyboardAvoidingView
+    <KeyboardAwareScrollView
       style={[styles.flex, { backgroundColor: theme.background }]}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      contentContainerStyle={styles.content}
+      keyboardShouldPersistTaps="handled"
+      bottomOffset={Spacing.four}
     >
-      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-        {formError ? (
-          <View style={[styles.banner, { backgroundColor: theme.backgroundElement, borderColor: theme.danger }]}>
-            <ThemedText type="small" themeColor="danger">
-              {formError}
-            </ThemedText>
-          </View>
-        ) : null}
-
-        {saved ? (
-          <View style={[styles.banner, { backgroundColor: theme.backgroundElement, borderColor: theme.primary }]}>
-            <ThemedText type="small" themeColor="primary">
-              Saved.
-            </ThemedText>
-          </View>
-        ) : null}
-
-        <View style={styles.field}>
-          <ThemedText type="smallBold">Email</ThemedText>
-          <ThemedText themeColor="textSecondary">{user?.email}</ThemedText>
+      {formError ? (
+        <View style={[styles.banner, { backgroundColor: theme.backgroundElement, borderColor: theme.danger }]}>
+          <ThemedText type="small" themeColor="danger">
+            {formError}
+          </ThemedText>
         </View>
+      ) : null}
 
-        <TextField
-          control={control}
-          name="name"
-          label="Full name"
-          placeholder="Ramesh Patil"
-          autoCapitalize="words"
-          autoComplete="name"
-          textContentType="name"
-          returnKeyType="next"
-        />
+      {saved ? (
+        <View style={[styles.banner, { backgroundColor: theme.backgroundElement, borderColor: theme.primary }]}>
+          <ThemedText type="small" themeColor="primary">
+            Saved.
+          </ThemedText>
+        </View>
+      ) : null}
 
-        <TextField
-          control={control}
-          name="phone"
-          label="Mobile number"
-          placeholder="98765 43210"
-          keyboardType="phone-pad"
-          autoComplete="tel"
-          textContentType="telephoneNumber"
-          returnKeyType="done"
-          hint="Printed on your parking receipt."
-          onSubmitEditing={handleSubmit(onSubmit)}
-        />
+      <View style={styles.field}>
+        <ThemedText type="smallBold">Email</ThemedText>
+        <ThemedText themeColor="textSecondary">{user?.email}</ThemedText>
+      </View>
 
-        <AppButton
-          label="Save changes"
-          onPress={handleSubmit(onSubmit)}
-          loading={isSubmitting}
-          disabled={isSubmitting}
-        />
+      <TextField
+        control={control}
+        name="name"
+        label="Full name"
+        placeholder="Ramesh Patil"
+        autoCapitalize="words"
+        autoComplete="name"
+        textContentType="name"
+        returnKeyType="next"
+      />
 
-        <AppButton
-          label="My vehicles"
-          variant="secondary"
-          onPress={() => router.push('/customer/vehicles')}
-        />
-      </ScrollView>
-    </KeyboardAvoidingView>
+      <TextField
+        control={control}
+        name="phone"
+        label="Mobile number"
+        placeholder="98765 43210"
+        keyboardType="phone-pad"
+        autoComplete="tel"
+        textContentType="telephoneNumber"
+        returnKeyType="done"
+        hint="Printed on your parking receipt."
+        onSubmitEditing={handleSubmit(onSubmit)}
+      />
+
+      <AppButton
+        label="Save changes"
+        onPress={handleSubmit(onSubmit)}
+        loading={isSubmitting}
+        disabled={isSubmitting}
+      />
+
+      <AppButton
+        label="My vehicles"
+        variant="secondary"
+        onPress={() => router.push('/customer/vehicles')}
+      />
+    </KeyboardAwareScrollView>
   );
 }
 

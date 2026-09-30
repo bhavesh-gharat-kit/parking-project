@@ -11,7 +11,8 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { Link, router } from 'expo-router';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 
 import {
   LoginRequestSchema,
@@ -82,97 +83,97 @@ export default function SignInScreen() {
   const busy = isSubmitting || googleBusy;
 
   return (
-    <KeyboardAvoidingView
+    <KeyboardAwareScrollView
       style={[styles.flex, { backgroundColor: theme.background }]}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      contentContainerStyle={styles.content}
+      keyboardShouldPersistTaps="handled"
+      bottomOffset={Spacing.four}
     >
-      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-        <View style={styles.header}>
-          <ThemedText type="subtitle">Welcome back</ThemedText>
-          <ThemedText themeColor="textSecondary">
-            Sign in to book parking and see your bookings.
+      <View style={styles.header}>
+        <ThemedText type="subtitle">Welcome back</ThemedText>
+        <ThemedText themeColor="textSecondary">
+          Sign in to book parking and see your bookings.
+        </ThemedText>
+      </View>
+
+      {formError ? (
+        <View style={[styles.banner, { backgroundColor: theme.backgroundElement, borderColor: theme.danger }]}>
+          <ThemedText type="small" themeColor="danger">
+            {formError}
           </ThemedText>
         </View>
+      ) : null}
 
-        {formError ? (
-          <View style={[styles.banner, { backgroundColor: theme.backgroundElement, borderColor: theme.danger }]}>
-            <ThemedText type="small" themeColor="danger">
-              {formError}
+      <TextField
+        control={control}
+        name="email"
+        label="Email"
+        placeholder="you@example.com"
+        keyboardType="email-address"
+        autoCapitalize="none"
+        autoComplete="email"
+        autoCorrect={false}
+        textContentType="emailAddress"
+        returnKeyType="next"
+      />
+
+      <TextField
+        control={control}
+        name="password"
+        label="Password"
+        placeholder="Your password"
+        secureTextEntry
+        autoCapitalize="none"
+        autoComplete="password"
+        textContentType="password"
+        returnKeyType="done"
+        onSubmitEditing={handleSubmit(onSubmit)}
+      />
+
+      <AppButton
+        label="Sign in"
+        onPress={handleSubmit(onSubmit)}
+        loading={isSubmitting}
+        disabled={busy}
+      />
+
+      <Link href="/forgot-password" asChild>
+        <ThemedText type="small" themeColor="primary" style={styles.centered}>
+          Forgot your password?
+        </ThemedText>
+      </Link>
+
+      {googleAvailable ? (
+        <>
+          <View style={styles.dividerRow}>
+            <View style={[styles.divider, { backgroundColor: theme.border }]} />
+            <ThemedText type="small" themeColor="textSecondary">
+              or
             </ThemedText>
+            <View style={[styles.divider, { backgroundColor: theme.border }]} />
           </View>
-        ) : null}
 
-        <TextField
-          control={control}
-          name="email"
-          label="Email"
-          placeholder="you@example.com"
-          keyboardType="email-address"
-          autoCapitalize="none"
-          autoComplete="email"
-          autoCorrect={false}
-          textContentType="emailAddress"
-          returnKeyType="next"
-        />
+          <AppButton
+            label="Sign in with Google"
+            variant="secondary"
+            onPress={onGoogle}
+            loading={googleBusy}
+            disabled={busy}
+          />
+        </>
+      ) : null}
 
-        <TextField
-          control={control}
-          name="password"
-          label="Password"
-          placeholder="Your password"
-          secureTextEntry
-          autoCapitalize="none"
-          autoComplete="password"
-          textContentType="password"
-          returnKeyType="done"
-          onSubmitEditing={handleSubmit(onSubmit)}
-        />
-
-        <AppButton
-          label="Sign in"
-          onPress={handleSubmit(onSubmit)}
-          loading={isSubmitting}
-          disabled={busy}
-        />
-
-        <Link href="/forgot-password" asChild>
-          <ThemedText type="small" themeColor="primary" style={styles.centered}>
-            Forgot your password?
+      <View style={styles.footer}>
+        <ThemedText type="small" themeColor="textSecondary">
+          New here?
+        </ThemedText>
+        <Link href="/sign-up" asChild>
+          <ThemedText type="small" themeColor="primary">
+            Create an account
           </ThemedText>
         </Link>
-
-        {googleAvailable ? (
-          <>
-            <View style={styles.dividerRow}>
-              <View style={[styles.divider, { backgroundColor: theme.border }]} />
-              <ThemedText type="small" themeColor="textSecondary">
-                or
-              </ThemedText>
-              <View style={[styles.divider, { backgroundColor: theme.border }]} />
-            </View>
-
-            <AppButton
-              label="Sign in with Google"
-              variant="secondary"
-              onPress={onGoogle}
-              loading={googleBusy}
-              disabled={busy}
-            />
-          </>
-        ) : null}
-
-        <View style={styles.footer}>
-          <ThemedText type="small" themeColor="textSecondary">
-            New here?
-          </ThemedText>
-          <Link href="/sign-up" asChild>
-            <ThemedText type="small" themeColor="primary">
-              Create an account
-            </ThemedText>
-          </Link>
-        </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+      </View>
+    </KeyboardAwareScrollView>
   );
 }
 

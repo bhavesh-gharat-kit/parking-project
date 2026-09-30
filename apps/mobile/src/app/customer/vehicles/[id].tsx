@@ -10,15 +10,8 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
-import {
-  ActivityIndicator,
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  View,
-} from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 
 import {
   VEHICLE_TYPES,
@@ -101,75 +94,75 @@ export default function VehicleFormScreen() {
           <ActivityIndicator color={theme.text} />
         </View>
       ) : (
-        <KeyboardAvoidingView
+        <KeyboardAwareScrollView
           style={[styles.flex, { backgroundColor: theme.background }]}
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          contentContainerStyle={styles.content}
+          keyboardShouldPersistTaps="handled"
+          bottomOffset={Spacing.four}
         >
-          <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-            {formError ? (
-              <View style={[styles.banner, { backgroundColor: theme.backgroundElement, borderColor: theme.danger }]}>
-                <ThemedText type="small" themeColor="danger">
-                  {formError}
-                </ThemedText>
-              </View>
-            ) : null}
-
-            <TextField
-              control={control}
-              name="number"
-              label="Vehicle number"
-              placeholder="MH04AB1234"
-              autoCapitalize="characters"
-              autoCorrect={false}
-              returnKeyType="next"
-            />
-
-            <View style={styles.field}>
-              <ThemedText type="smallBold">Vehicle type</ThemedText>
-              <Controller
-                control={control}
-                name="type"
-                render={({ field: { onChange, value } }) => (
-                  <View style={styles.row}>
-                    {VEHICLE_TYPES.map((type) => (
-                      <Pressable
-                        key={type}
-                        onPress={() => onChange(type)}
-                        style={[
-                          styles.chip,
-                          {
-                            backgroundColor:
-                              value === type ? theme.backgroundSelected : theme.backgroundElement,
-                          },
-                        ]}
-                      >
-                        <ThemedText type="small">{VEHICLE_TYPE_LABELS[type]}</ThemedText>
-                      </Pressable>
-                    ))}
-                  </View>
-                )}
-              />
+          {formError ? (
+            <View style={[styles.banner, { backgroundColor: theme.backgroundElement, borderColor: theme.danger }]}>
+              <ThemedText type="small" themeColor="danger">
+                {formError}
+              </ThemedText>
             </View>
+          ) : null}
 
-            <TextField
+          <TextField
+            control={control}
+            name="number"
+            label="Vehicle number"
+            placeholder="MH04AB1234"
+            autoCapitalize="characters"
+            autoCorrect={false}
+            returnKeyType="next"
+          />
+
+          <View style={styles.field}>
+            <ThemedText type="smallBold">Vehicle type</ThemedText>
+            <Controller
               control={control}
-              name="makeModel"
-              label="Make / model"
-              placeholder="Honda Activa"
-              autoCapitalize="words"
-              hint="Optional — helps tell two vehicles apart."
-              returnKeyType="done"
-              onSubmitEditing={handleSubmit(onSubmit)}
+              name="type"
+              render={({ field: { onChange, value } }) => (
+                <View style={styles.row}>
+                  {VEHICLE_TYPES.map((type) => (
+                    <Pressable
+                      key={type}
+                      onPress={() => onChange(type)}
+                      style={[
+                        styles.chip,
+                        {
+                          backgroundColor:
+                            value === type ? theme.backgroundSelected : theme.backgroundElement,
+                        },
+                      ]}
+                    >
+                      <ThemedText type="small">{VEHICLE_TYPE_LABELS[type]}</ThemedText>
+                    </Pressable>
+                  ))}
+                </View>
+              )}
             />
+          </View>
 
-            <AppButton
-              label={isNew ? 'Add vehicle' : 'Save changes'}
-              onPress={handleSubmit(onSubmit)}
-              loading={isSubmitting}
-              disabled={isSubmitting}
-            />
-          </ScrollView>
-        </KeyboardAvoidingView>
+          <TextField
+            control={control}
+            name="makeModel"
+            label="Make / model"
+            placeholder="Honda Activa"
+            autoCapitalize="words"
+            hint="Optional — helps tell two vehicles apart."
+            returnKeyType="done"
+            onSubmitEditing={handleSubmit(onSubmit)}
+          />
+
+          <AppButton
+            label={isNew ? 'Add vehicle' : 'Save changes'}
+            onPress={handleSubmit(onSubmit)}
+            loading={isSubmitting}
+            disabled={isSubmitting}
+          />
+        </KeyboardAwareScrollView>
       )}
     </>
   );

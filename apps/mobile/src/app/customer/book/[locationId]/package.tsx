@@ -31,6 +31,7 @@ import {
 } from '@parking/shared';
 
 import { AppButton } from '@/components/app-button';
+import { ScreenContainer } from '@/components/screen-container';
 import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
@@ -106,7 +107,7 @@ export default function BookPackageScreen() {
     return (
       <>
         <Stack.Screen options={{ title: 'Choose a package' }} />
-        <View style={[styles.container, { backgroundColor: theme.background }]}>
+        <ScreenContainer>
           <ThemedText themeColor="textSecondary">
             Choose a vehicle first — parking packages are priced per vehicle type.
           </ThemedText>
@@ -114,7 +115,7 @@ export default function BookPackageScreen() {
             label="Choose a vehicle"
             onPress={() => router.replace(`/customer/book/${locationId}`)}
           />
-        </View>
+        </ScreenContainer>
       </>
     );
   }
@@ -122,7 +123,7 @@ export default function BookPackageScreen() {
   return (
     <>
       <Stack.Screen options={{ title: 'Choose a package' }} />
-      <View style={[styles.container, { backgroundColor: theme.background }]}>
+      <ScreenContainer>
         <ThemedText type="small" themeColor="textSecondary">
           {VEHICLE_TYPE_LABELS[vehicleType]} packages at this location.
         </ThemedText>
@@ -184,17 +185,12 @@ export default function BookPackageScreen() {
           loading={submitting}
           onPress={() => void confirm()}
         />
-      </View>
+      </ScreenContainer>
     </>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: Spacing.four,
-    gap: Spacing.three,
-  },
   loading: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   list: { gap: Spacing.two },
   card: {

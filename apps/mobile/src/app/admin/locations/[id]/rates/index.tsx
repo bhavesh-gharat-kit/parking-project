@@ -17,6 +17,7 @@ import {
 } from '@parking/shared';
 
 import { AppButton } from '@/components/app-button';
+import { ScreenContainer } from '@/components/screen-container';
 import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
@@ -94,7 +95,7 @@ export default function AdminRatesScreen() {
   return (
     <>
       <Stack.Screen options={{ title: location ? `${location.name} rates` : 'Rates' }} />
-      <View style={[styles.container, { backgroundColor: theme.background }]}>
+      <ScreenContainer>
         <FlatList
           data={rates ?? []}
           keyExtractor={(item) => item.id}
@@ -151,17 +152,12 @@ export default function AdminRatesScreen() {
           label="Add rate"
           onPress={() => router.push(`/admin/locations/${locationId}/rates/new`)}
         />
-      </View>
+      </ScreenContainer>
     </>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: Spacing.four,
-    gap: Spacing.three,
-  },
   list: {
     gap: Spacing.two,
   },

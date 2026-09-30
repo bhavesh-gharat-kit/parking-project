@@ -20,6 +20,7 @@ import {
 } from '@parking/shared';
 
 import { AppButton } from '@/components/app-button';
+import { ScreenContainer } from '@/components/screen-container';
 import { ThemedText } from '@/components/themed-text';
 import { Spacing, type ThemeColor } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
@@ -109,7 +110,7 @@ export default function AdminUserDetailScreen() {
     return (
       <>
         <Stack.Screen options={{ title: 'User' }} />
-        <View style={[styles.container, styles.centered, { backgroundColor: theme.background }]}>
+        <ScreenContainer style={styles.centered}>
           {loadError ? (
             <>
               <ThemedText themeColor="danger">{loadError}</ThemedText>
@@ -118,7 +119,7 @@ export default function AdminUserDetailScreen() {
           ) : (
             <ActivityIndicator color={theme.text} />
           )}
-        </View>
+        </ScreenContainer>
       </>
     );
   }
@@ -126,7 +127,7 @@ export default function AdminUserDetailScreen() {
   return (
     <>
       <Stack.Screen options={{ title: user.name ?? user.email }} />
-      <View style={[styles.container, { backgroundColor: theme.background }]}>
+      <ScreenContainer>
         <FlatList
           data={bookings ?? []}
           keyExtractor={(item) => item.id}
@@ -205,17 +206,12 @@ export default function AdminUserDetailScreen() {
             </ThemedText>
           </View>
         ) : null}
-      </View>
+      </ScreenContainer>
     </>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: Spacing.four,
-    gap: Spacing.three,
-  },
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: Spacing.three },
   header: { gap: Spacing.three, marginBottom: Spacing.three },
   list: { gap: Spacing.two },

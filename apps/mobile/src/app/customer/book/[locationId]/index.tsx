@@ -20,6 +20,7 @@ import { ActivityIndicator, FlatList, Pressable, StyleSheet, View } from 'react-
 import { VEHICLE_TYPE_LABELS, type Vehicle } from '@parking/shared';
 
 import { AppButton } from '@/components/app-button';
+import { ScreenContainer } from '@/components/screen-container';
 import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
@@ -60,7 +61,7 @@ export default function BookVehicleScreen() {
   return (
     <>
       <Stack.Screen options={{ title: 'Choose a vehicle' }} />
-      <View style={[styles.container, { backgroundColor: theme.background }]}>
+      <ScreenContainer>
         <ThemedText type="small" themeColor="textSecondary">
           Which vehicle are you parking?
         </ThemedText>
@@ -120,17 +121,12 @@ export default function BookVehicleScreen() {
           variant={isEmpty ? 'primary' : 'secondary'}
           onPress={() => router.push('/customer/vehicles/new')}
         />
-      </View>
+      </ScreenContainer>
     </>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: Spacing.four,
-    gap: Spacing.three,
-  },
   loading: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   list: { gap: Spacing.two },
   card: {

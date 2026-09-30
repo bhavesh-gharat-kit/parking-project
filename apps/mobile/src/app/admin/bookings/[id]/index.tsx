@@ -15,15 +15,8 @@
  */
 import { Stack, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useState } from 'react';
-import {
-  ActivityIndicator,
-  Alert,
-  RefreshControl,
-  ScrollView,
-  StyleSheet,
-  TextInput,
-  View,
-} from 'react-native';
+import { ActivityIndicator, Alert, RefreshControl, StyleSheet, TextInput, View } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 
 import {
   BOOKING_STATUS_LABELS,
@@ -205,9 +198,10 @@ export default function AdminBookingDetailScreen() {
   return (
     <>
       <Stack.Screen options={{ title: booking.bookingNumber }} />
-      <ScrollView
+      <KeyboardAwareScrollView
         style={{ backgroundColor: theme.background }}
         contentContainerStyle={styles.container}
+        bottomOffset={Spacing.four}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={() => void refresh()} tintColor={theme.text} />
         }
@@ -287,7 +281,7 @@ export default function AdminBookingDetailScreen() {
             </View>
           </View>
         ) : null}
-      </ScrollView>
+      </KeyboardAwareScrollView>
     </>
   );
 }

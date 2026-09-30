@@ -10,6 +10,7 @@ import { router } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 
 import { AppButton } from '@/components/app-button';
+import { ScreenContainer } from '@/components/screen-container';
 import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
@@ -21,7 +22,7 @@ export default function CustomerHomeScreen() {
   const signOut = useAuthStore((state) => state.signOut);
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.background }]}>
+    <ScreenContainer>
       <ThemedText type="subtitle">Customer</ThemedText>
 
       <View style={[styles.card, { backgroundColor: theme.backgroundElement }]}>
@@ -59,16 +60,11 @@ export default function CustomerHomeScreen() {
       <View style={styles.spacer} />
 
       <AppButton label="Sign out" variant="secondary" onPress={() => void signOut()} />
-    </View>
+    </ScreenContainer>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: Spacing.four,
-    gap: Spacing.three,
-  },
   card: {
     borderRadius: 12,
     padding: Spacing.three,

@@ -14,6 +14,7 @@ import { Alert, FlatList, StyleSheet, View } from 'react-native';
 import { VEHICLE_TYPE_LABELS, type Vehicle } from '@parking/shared';
 
 import { AppButton } from '@/components/app-button';
+import { ScreenContainer } from '@/components/screen-container';
 import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
@@ -71,7 +72,7 @@ export default function VehiclesScreen() {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.background }]}>
+    <ScreenContainer>
       <FlatList
         data={vehicles ?? []}
         keyExtractor={(item) => item.id}
@@ -119,16 +120,11 @@ export default function VehiclesScreen() {
       ) : null}
 
       <AppButton label="Add vehicle" onPress={() => router.push('/customer/vehicles/new')} />
-    </View>
+    </ScreenContainer>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: Spacing.four,
-    gap: Spacing.three,
-  },
   list: {
     gap: Spacing.two,
   },

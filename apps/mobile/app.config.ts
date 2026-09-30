@@ -9,6 +9,20 @@
  * development build sit on the same phone as the launch build — useful during
  * launch week when you need to reproduce something on the real APK without
  * uninstalling your dev client.
+ *
+ * ── Why a dev client at all (Phase 01 deliverable 4) ────────────────────────
+ * Expo Go only contains the native modules Expo chose to bundle. This app needs
+ * Google Sign-In (decisions.md D3), expo-secure-store for the session JWT, and
+ * expo-notifications for status pushes (D4) — none of which Expo Go can load.
+ * So development happens against a custom dev client built by the
+ * `eas.json` `development` profile, installed once on the test phone; after
+ * that `npm start` reloads JS into it exactly like Expo Go would.
+ *
+ * `eas.json`'s `preview` profile is what actually ships on Thursday:
+ * decisions.md D1 targets a sideloaded APK, not a Play Store submission, so it
+ * builds an installable .apk with production JS rather than an .aab.
+ * (`eas.json` itself can't carry this comment — its JSON schema no longer
+ * tolerates a `"//"` key.)
  */
 import type { ConfigContext, ExpoConfig } from 'expo/config';
 

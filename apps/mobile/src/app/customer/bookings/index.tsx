@@ -31,6 +31,7 @@ import {
 } from '@parking/shared';
 
 import { AppButton } from '@/components/app-button';
+import { ScreenContainer } from '@/components/screen-container';
 import { ThemedText } from '@/components/themed-text';
 import { Spacing, type ThemeColor } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
@@ -74,7 +75,7 @@ export default function BookingsScreen() {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.background }]}>
+    <ScreenContainer>
       {bookings === null && !loadError ? (
         <View style={styles.loading}>
           <ActivityIndicator color={theme.text} />
@@ -141,16 +142,11 @@ export default function BookingsScreen() {
       ) : null}
 
       <AppButton label="Book parking" onPress={() => router.push('/customer/book')} />
-    </View>
+    </ScreenContainer>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: Spacing.four,
-    gap: Spacing.three,
-  },
   loading: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   list: { gap: Spacing.two },
   card: {

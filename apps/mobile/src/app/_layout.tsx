@@ -31,6 +31,8 @@ import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import { useColorScheme } from 'react-native';
+import { KeyboardProvider } from 'react-native-keyboard-controller';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import type { RegisterPushTokenRequest } from '@parking/shared';
 
@@ -120,19 +122,23 @@ export default function RootLayout() {
   }, []);
 
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <StatusBar style="auto" />
-      <Stack>
-        {/* The redirect that picks a stack; never shown. */}
-        <Stack.Screen name="index" options={{ headerShown: false }} />
+    <SafeAreaProvider>
+      <KeyboardProvider>
+        <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+          <StatusBar style="auto" />
+          <Stack>
+            {/* The redirect that picks a stack; never shown. */}
+            <Stack.Screen name="index" options={{ headerShown: false }} />
 
-        <Stack.Screen name="sign-in" options={{ title: 'Sign in' }} />
-        <Stack.Screen name="sign-up" options={{ title: 'Create account' }} />
-        <Stack.Screen name="forgot-password" options={{ title: 'Forgot password' }} />
+            <Stack.Screen name="sign-in" options={{ title: 'Sign in' }} />
+            <Stack.Screen name="sign-up" options={{ title: 'Create account' }} />
+            <Stack.Screen name="forgot-password" options={{ title: 'Forgot password' }} />
 
-        <Stack.Screen name="customer" options={{ headerShown: false }} />
-        <Stack.Screen name="admin" options={{ headerShown: false }} />
-      </Stack>
-    </ThemeProvider>
+            <Stack.Screen name="customer" options={{ headerShown: false }} />
+            <Stack.Screen name="admin" options={{ headerShown: false }} />
+          </Stack>
+        </ThemeProvider>
+      </KeyboardProvider>
+    </SafeAreaProvider>
   );
 }

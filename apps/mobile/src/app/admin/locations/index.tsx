@@ -12,6 +12,7 @@ import { FlatList, StyleSheet, View } from 'react-native';
 import type { AdminParkingLocation } from '@parking/shared';
 
 import { AppButton } from '@/components/app-button';
+import { ScreenContainer } from '@/components/screen-container';
 import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
@@ -39,7 +40,7 @@ export default function AdminLocationsScreen() {
   );
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.background }]}>
+    <ScreenContainer>
       <FlatList
         data={locations ?? []}
         keyExtractor={(item) => item.id}
@@ -87,16 +88,11 @@ export default function AdminLocationsScreen() {
       ) : null}
 
       <AppButton label="Add location" onPress={() => router.push('/admin/locations/new')} />
-    </View>
+    </ScreenContainer>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: Spacing.four,
-    gap: Spacing.three,
-  },
   list: {
     gap: Spacing.two,
   },

@@ -21,7 +21,8 @@ import { Image } from 'expo-image';
 import { router, Stack, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { ActivityIndicator, ScrollView, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 
 import {
   BookingUtrSubmitRequestSchema,
@@ -111,10 +112,11 @@ export default function UpiPaymentScreen() {
   return (
     <>
       <Stack.Screen options={{ title: 'Pay via UPI' }} />
-      <ScrollView
+      <KeyboardAwareScrollView
         style={{ backgroundColor: theme.background }}
         contentContainerStyle={styles.container}
         keyboardShouldPersistTaps="handled"
+        bottomOffset={Spacing.four}
       >
         <View style={[styles.card, { backgroundColor: theme.backgroundElement }]}>
           <ThemedText type="small" themeColor="textSecondary">
@@ -187,7 +189,7 @@ export default function UpiPaymentScreen() {
             />
           </View>
         )}
-      </ScrollView>
+      </KeyboardAwareScrollView>
     </>
   );
 }

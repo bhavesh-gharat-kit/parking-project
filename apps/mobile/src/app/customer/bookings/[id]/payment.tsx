@@ -16,6 +16,7 @@ import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 import { PAYMENT_METHOD_LABELS, formatInr, type Booking, type PaymentMethod } from '@parking/shared';
 
 import { AppButton } from '@/components/app-button';
+import { ScreenContainer } from '@/components/screen-container';
 import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
@@ -85,7 +86,7 @@ export default function ChoosePaymentMethodScreen() {
     return (
       <>
         <Stack.Screen options={{ title: 'Choose payment method' }} />
-        <View style={[styles.container, styles.centered, { backgroundColor: theme.background }]}>
+        <ScreenContainer style={styles.centered}>
           {loadError ? (
             <>
               <ThemedText themeColor="danger">{loadError}</ThemedText>
@@ -94,7 +95,7 @@ export default function ChoosePaymentMethodScreen() {
           ) : (
             <ActivityIndicator color={theme.text} />
           )}
-        </View>
+        </ScreenContainer>
       </>
     );
   }
@@ -102,7 +103,7 @@ export default function ChoosePaymentMethodScreen() {
   return (
     <>
       <Stack.Screen options={{ title: 'Choose payment method' }} />
-      <View style={[styles.container, { backgroundColor: theme.background }]}>
+      <ScreenContainer>
         <ThemedText type="small" themeColor="textSecondary">
           Amount to pay: {formatInr(booking.amountInPaise)}
         </ThemedText>
@@ -147,17 +148,12 @@ export default function ChoosePaymentMethodScreen() {
           loading={submitting}
           onPress={() => void confirm()}
         />
-      </View>
+      </ScreenContainer>
     </>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: Spacing.four,
-    gap: Spacing.three,
-  },
   centered: { alignItems: 'center', justifyContent: 'center', gap: Spacing.three },
   list: { gap: Spacing.two },
   card: {

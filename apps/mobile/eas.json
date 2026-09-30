@@ -5,19 +5,6 @@
     "appVersionSource": "local"
   },
   "build": {
-    "//": [
-      "Why a dev client at all (Phase 01 deliverable 4):",
-      "Expo Go only contains the native modules Expo chose to bundle. This app needs",
-      "Google Sign-In (decisions.md D3), expo-secure-store for the session JWT, and",
-      "expo-notifications for status pushes (D4) — none of which Expo Go can load. So",
-      "development happens against a custom dev client built by the 'development'",
-      "profile below, installed once on the test phone; after that `npm start` reloads",
-      "JS into it exactly like Expo Go would.",
-      "",
-      "'preview' is what actually ships on Thursday: decisions.md D1 targets a",
-      "sideloaded APK, not a Play Store submission, so it builds an installable .apk",
-      "with production JS rather than an .aab."
-    ],
     "development": {
       "developmentClient": true,
       "distribution": "internal",
@@ -36,7 +23,9 @@
         "buildType": "apk"
       },
       "env": {
-        "APP_VARIANT": "preview"
+        "APP_VARIANT": "preview",
+        "EXPO_PUBLIC_API_BASE_URL": "https://parking-app.kumarinfotech.com",
+        "EXPO_PUBLIC_API_TIMEOUT_SECONDS": "20"
       }
     },
     "production": {
