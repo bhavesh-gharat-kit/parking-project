@@ -56,6 +56,65 @@ export const GoogleSignInRequestSchema = z.object({
 });
 export type GoogleSignInRequest = z.infer<typeof GoogleSignInRequestSchema>;
 
+/**
+ * `POST /api/profile/change-password` — a signed-in user changing their own
+ * password (Phase 14).
+ *
+ * Note what is absent, for the same reason `role` is absent above: there is no
+ * target user. The endpoint changes the password of whichever account the Bearer
+ * token resolves to, so there is no field here that could aim it at someone else.
+ *
+ * `currentPassword` is required even though the caller already holds a valid
+ * session. D3 sessions are stateless JWTs that live up to 30 days, so a token
+ * that leaked off a lost phone is a password change away from being a permanent
+ * account takeover — unless the thief also has to know the password.
+ */
+const ChangePasswordBaseSchema = z.object({
+  /**
+   * Deliberately NOT `PasswordSchema`, exactly as in `LoginRequestSchema`: this is
+   * an existing password being checked, not a new one being chosen. Validating it
+   * against today's rules would reject an older, shorter-but-correct password
+   * before bcrypt ever saw it, and would tell the caller what our rules are.
+   */
+  currentPassword: z.string().min(1, 'Enter your current password').max(200),
+  /** The same rules the account was registered under (`RegisterRequestSchema`). */
+  newPassword: PasswordSchema,
+});
+
+const NEW_PASSWORD_MUST_DIFFER = 'Choose a new password different from your current one';
+
+/** A re-type of the same string cannot be what "changed" means. */
+const newPasswordDiffers = (value: { currentPassword: string; newPassword: string }) =>
+  value.newPassword !== value.currentPassword;
+
+export const ChangePasswordRequestSchema = ChangePasswordBaseSchema.refine(newPasswordDiffers, {
+  path: ['newPassword'],
+  message: NEW_PASSWORD_MUST_DIFFER,
+});
+export type ChangePasswordRequest = z.input<typeof ChangePasswordRequestSchema>;
+export type ChangePasswordRequestParsed = z.output<typeof ChangePasswordRequestSchema>;
+
+/**
+ * What the RN form validates — the wire contract plus one field that never
+ * leaves the device.
+ *
+ * `confirmNewPassword` is a typo check, not a rule the server can enforce: by the
+ * time a request arrives there is only one new password in it, and a server that
+ * demanded the same string twice would be asking the client to prove something it
+ * already decided. So it is derived from `ChangePasswordBaseSchema` rather than
+ * added to the request schema, and the screen posts only the two fields above.
+ */
+export const ChangePasswordFormSchema = ChangePasswordBaseSchema.extend({
+  confirmNewPassword: z.string().min(1, 'Re-enter your new password'),
+})
+  .refine(newPasswordDiffers, { path: ['newPassword'], message: NEW_PASSWORD_MUST_DIFFER })
+  .refine((value) => value.confirmNewPassword === value.newPassword, {
+    path: ['confirmNewPassword'],
+    message: 'The two passwords do not match',
+  });
+export type ChangePasswordForm = z.input<typeof ChangePasswordFormSchema>;
+export type ChangePasswordFormParsed = z.output<typeof ChangePasswordFormSchema>;
+
 /* ───────────────────────────── Responses ───────────────────────────── */
 
 /**

@@ -5,6 +5,9 @@
  * approval queue, UPI verification, cash approval and user management. Phase
  * 10 adds the dashboard and reports.
  *
+ * Phase 14 adds `profile` — the admin's own name/phone and password, the same
+ * `requireUser` endpoints a customer's profile screen uses.
+ *
  * `reports/index` is a separate screen from `index` (the dashboard) rather
  * than a tab on it (context.txt §20 vs §26): the dashboard is "right now", the
  * reports screen is "over a date range" — deliberately different questions
@@ -37,6 +40,7 @@ export default function AdminLayout() {
       <Stack.Screen name="reports/index" options={{ title: 'Reports' }} />
       <Stack.Screen name="users/index" options={{ title: 'Users' }} />
       <Stack.Screen name="users/[id]/index" options={{ title: 'User' }} />
+      <Stack.Screen name="profile" options={{ title: 'My profile' }} />
     </Stack>
   );
 }

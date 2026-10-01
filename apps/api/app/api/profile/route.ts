@@ -1,9 +1,14 @@
 /**
- * GET/PATCH /api/profile — the signed-in customer's own profile (context.txt §5).
+ * GET/PATCH /api/profile — the signed-in user's own profile (context.txt §5).
  *
  * `email` never appears in the request body: it is the login identifier for
  * both providers (D3), so the RN profile screen shows it read-only and there is
  * no field here that could change it.
+ *
+ * Not customer-only, and never was: the guard is `requireUser`, and both handlers
+ * address the row by `auth.actor.userId`. That is why Phase 14's `admin/profile`
+ * screen needed no backend change here — an admin account calling this edits
+ * itself, exactly as a customer's does.
  */
 import type { NextRequest } from 'next/server';
 
@@ -27,7 +32,10 @@ export async function GET(req: NextRequest) {
     return fail('UNAUTHORIZED', 'This session is no longer valid. Please sign in again.');
   }
 
-  const payload: ProfileResponse = { user: toSessionUser(user) };
+  const payload: ProfileResponse = {
+    user: toSessionUser(user),
+    hasPassword: user.passwordHash !== null,
+  };
   return ok(payload, { headers: { 'Cache-Control': 'no-store' } });
 }
 
@@ -43,6 +51,9 @@ export async function PATCH(req: NextRequest) {
     data: { name: body.data.name, phone: body.data.phone ?? null },
   });
 
-  const payload: ProfileResponse = { user: toSessionUser(user) };
+  const payload: ProfileResponse = {
+    user: toSessionUser(user),
+    hasPassword: user.passwordHash !== null,
+  };
   return ok(payload, { headers: { 'Cache-Control': 'no-store' } });
 }

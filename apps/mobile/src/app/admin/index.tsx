@@ -136,6 +136,12 @@ export default function AdminHomeScreen() {
         icon={<Ionicons name="business-outline" size={20} color={theme.text} />}
         onPress={() => router.push('/admin/locations')}
       />
+      <AppButton
+        label="My profile"
+        variant="secondary"
+        icon={<Ionicons name="person-outline" size={20} color={theme.text} />}
+        onPress={() => router.push('/admin/profile')}
+      />
 
       <AppButton label="Sign out" variant="secondary" onPress={() => void signOut()} />
     </ScrollView>
