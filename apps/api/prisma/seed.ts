@@ -22,7 +22,11 @@ import 'dotenv/config';
 
 const DEFAULT_SETTINGS: Record<string, string> = {
   'business.name': 'Pay & Park',
-  'business.supportPhone': '',
+  // Udaykumar Mane, the on-site support contact per `_/by-client/file.txt` —
+  // shown on the customer receipt (`receipt.tsx`). Not Rajkumar Mane's number
+  // (the admin/operator): that one belongs on his ADMIN user account, which
+  // only `npm run admin:create` can set, not this seed.
+  'business.supportPhone': '7977776764',
   'payment.upi.vpa': '',
   'payment.upi.payeeName': '',
   'booking.expiryMinutes': '10',
@@ -31,10 +35,18 @@ const DEFAULT_SETTINGS: Record<string, string> = {
 const KALYAN_LOCATION = {
   code: 'KLY',
   name: 'Kalyan',
-  addressLine: 'Station Road, near Kalyan Railway Station',
-  city: 'Kalyan',
+  // Per `_/by-client/file.txt` — the client's actual address for this branch.
+  addressLine: 'Borgaonkar Wadi, near Kalyan Railway Station',
+  city: 'Kalyan West',
   state: 'Maharashtra',
   pincode: '421301',
+  contactPhone: '7977776764',
+  // Real UPI details from `_/by-client/WhatsApp Image 2026-09-30 at
+  // 6.39.36 PM.jpeg` (the Paytm Soundbox QR at this location) — decoded and
+  // verified to scan correctly as `upi://pay?pa=paytm.s26ypuu@pty&pn=Paytm`
+  // before being cropped and re-hosted below.
+  upiVpa: 'paytm.s26ypuu@pty',
+  upiQrImageUrl: 'https://media.kumarinfotech.com/media/parking-project/location-qr/kalyan-upi-qr.png',
 };
 
 /** durationMinutes + priceInPaise per vehicle type — starter rate table (§7). */
