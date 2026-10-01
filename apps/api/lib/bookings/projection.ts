@@ -29,6 +29,7 @@ export const BOOKING_RELATIONS = {
       amountInPaise: true,
       upiPayeeVpa: true,
       upiUtr: true,
+      utrScreenshotUrl: true,
       paidAt: true,
     },
   },
@@ -52,6 +53,7 @@ function toBookingPayment(
     amountInPaise: payment.amountInPaise,
     upiPayeeVpa: payment.upiPayeeVpa,
     upiUtr: payment.upiUtr,
+    utrScreenshotUrl: payment.utrScreenshotUrl,
     paidAt: payment.paidAt?.toISOString() ?? null,
   };
 }

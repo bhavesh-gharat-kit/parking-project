@@ -84,6 +84,13 @@ export type TransitionRequest = {
      */
     upiUtr?: string;
     /**
+     * Phase 15 — the media-host URL of the payment screenshot the customer
+     * attached alongside the UTR, if the upload succeeded. Optional, same as
+     * the screenshot itself (§278-336): a missed upload never blocks this
+     * transition, it just means this stays unset.
+     */
+    utrScreenshotUrl?: string;
+    /**
      * Phase 06 — creates the `Payment` row when the booking has none yet, i.e.
      * the customer is selecting UPI or cash for the first time. Ignored if
      * `current.payment` already exists (a retried request updates it instead,
@@ -252,6 +259,7 @@ export async function transitionBooking(request: TransitionRequest): Promise<Tra
           amountInPaise: payment.create.amountInPaise,
           upiPayeeVpa: payment.create.upiPayeeVpa ?? null,
           ...(payment.upiUtr ? { upiUtr: payment.upiUtr, utrSubmittedAt: now } : {}),
+          ...(payment.utrScreenshotUrl ? { utrScreenshotUrl: payment.utrScreenshotUrl } : {}),
           ...(payment.to === 'PAID' ? { paidAt: payment.paidAt ?? now } : {}),
         },
       });
@@ -261,6 +269,7 @@ export async function transitionBooking(request: TransitionRequest): Promise<Tra
         data: {
           status: payment.to,
           ...(payment.upiUtr ? { upiUtr: payment.upiUtr, utrSubmittedAt: now } : {}),
+          ...(payment.utrScreenshotUrl ? { utrScreenshotUrl: payment.utrScreenshotUrl } : {}),
           ...(payment.to === 'PAID' ? { paidAt: payment.paidAt ?? now } : {}),
           ...(payment.to === 'REFUNDED' ? { refundedAt: now } : {}),
           ...(payment.recordVerifier

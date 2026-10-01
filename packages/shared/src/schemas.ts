@@ -71,6 +71,18 @@ export const UpiUtrSchema = z
   .transform((value) => value.replace(/\s/g, ''))
   .refine((value) => /^[A-Z0-9]{8,24}$/.test(value), 'Enter the UPI reference exactly as shown in your payment app');
 
+/**
+ * Same "empty string means not supplied" convention as `OptionalIndianPhoneSchema`.
+ *
+ * Phase 15 — the UTR text field became optional once the payment screenshot
+ * (which the UTR used to be the only evidence for) became the required one;
+ * when a customer does type something, it is still held to the same shape.
+ */
+export const OptionalUpiUtrSchema = z.preprocess(
+  (value) => (typeof value === 'string' && value.trim() === '' ? undefined : value),
+  UpiUtrSchema.optional(),
+);
+
 /** A UPI VPA / payment address, e.g. "business@okhdfcbank" (§11, Phase 06). */
 export const UpiVpaSchema = z
   .string()

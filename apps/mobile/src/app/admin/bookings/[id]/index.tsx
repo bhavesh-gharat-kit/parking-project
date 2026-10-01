@@ -3,8 +3,13 @@
  *
  * The one screen that turns a queue row into a decision: everything the
  * customer's own booking summary shows, plus who it belongs to, and — for a
- * UPI booking — the UTR in its own callout, because checking that number
- * against the bank statement is the entire reason this screen exists.
+ * UPI booking — the payment evidence in its own callout, because checking
+ * that against the bank statement is the entire reason this screen exists.
+ *
+ * Phase 15 made the screenshot the required evidence and the UTR optional, so
+ * the callout below renders on either one being present and shows whichever
+ * pieces actually exist — it must not gate the screenshot on `upiUtr` being
+ * set, since a booking can now have a screenshot with no typed UTR at all.
  *
  * ── Why the reject reason is an inline field, not `Alert.prompt` ───────────
  * `Alert.prompt` only exists on iOS; this is an Android-first app (context.txt
@@ -13,10 +18,22 @@
  * asks for (context.txt, Phase 07 deliverables): a customer's booking is never
  * one accidental tap away from being rejected.
  */
+import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
 import { Stack, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { ActivityIndicator, Alert, RefreshControl, StyleSheet, TextInput, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Alert,
+  Modal,
+  Pressable,
+  RefreshControl,
+  StyleSheet,
+  TextInput,
+  View,
+} from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import {
   PAYMENT_METHOD_LABELS,
@@ -63,6 +80,7 @@ function SummaryRowView({ row, first }: { row: SummaryRow; first: boolean }) {
 
 export default function AdminBookingDetailScreen() {
   const theme = useTheme();
+  const insets = useSafeAreaInsets();
   const { id } = useLocalSearchParams<{ id: string }>();
 
   const [booking, setBooking] = useState<AdminBooking | null>(null);
@@ -72,6 +90,7 @@ export default function AdminBookingDetailScreen() {
   const [rejecting, setRejecting] = useState(false);
   const [rejectMode, setRejectMode] = useState(false);
   const [reason, setReason] = useState('');
+  const [screenshotViewerOpen, setScreenshotViewerOpen] = useState(false);
 
   const load = useCallback(async () => {
     setLoadError(null);
@@ -208,15 +227,55 @@ export default function AdminBookingDetailScreen() {
           <StatusBadge status={booking.status} size="large" />
         </View>
 
-        {booking.payment?.upiUtr ? (
+        {booking.payment?.upiUtr || booking.payment?.utrScreenshotUrl ? (
           <View style={[styles.utrCallout, { backgroundColor: theme.backgroundSelected, borderColor: theme.primary }]}>
             <ThemedText type="small" themeColor="textSecondary">
-              UPI reference (UTR) — check this against the bank statement
+              Payment evidence — check this against the bank statement
             </ThemedText>
-            <ThemedText type="title" style={styles.utrValue}>
-              {booking.payment.upiUtr}
-            </ThemedText>
+
+            {booking.payment.upiUtr ? (
+              <ThemedText type="title" style={styles.utrValue}>
+                {booking.payment.upiUtr}
+              </ThemedText>
+            ) : null}
+
+            {booking.payment.utrScreenshotUrl ? (
+              <Pressable onPress={() => setScreenshotViewerOpen(true)} style={styles.screenshotThumbWrap}>
+                <Image
+                  source={{ uri: booking.payment.utrScreenshotUrl }}
+                  style={styles.screenshotThumb}
+                  contentFit="cover"
+                />
+                <ThemedText type="small" themeColor="textSecondary">
+                  Tap to view full size
+                </ThemedText>
+              </Pressable>
+            ) : null}
           </View>
+        ) : null}
+
+        {booking.payment?.utrScreenshotUrl ? (
+          <Modal
+            visible={screenshotViewerOpen}
+            animationType="fade"
+            onRequestClose={() => setScreenshotViewerOpen(false)}
+          >
+            <View style={styles.viewerBackdrop}>
+              <Pressable
+                onPress={() => setScreenshotViewerOpen(false)}
+                style={[styles.viewerClose, { top: Spacing.three + insets.top }]}
+                accessibilityRole="button"
+                accessibilityLabel="Close"
+              >
+                <Ionicons name="close" size={28} color="#fff" />
+              </Pressable>
+              <Image
+                source={{ uri: booking.payment.utrScreenshotUrl }}
+                style={styles.viewerImage}
+                contentFit="contain"
+              />
+            </View>
+          </Modal>
         ) : null}
 
         <View style={[styles.card, { backgroundColor: theme.backgroundElement }]}>
@@ -299,6 +358,28 @@ const styles = StyleSheet.create({
   utrValue: {
     fontSize: 28,
     lineHeight: 32,
+  },
+  screenshotThumbWrap: { alignItems: 'flex-start', gap: Spacing.half },
+  screenshotThumb: {
+    width: 120,
+    height: 120,
+    borderRadius: 10,
+  },
+  viewerBackdrop: {
+    flex: 1,
+    backgroundColor: '#000',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  viewerImage: {
+    width: '100%',
+    height: '100%',
+  },
+  viewerClose: {
+    position: 'absolute',
+    right: Spacing.three,
+    zIndex: 1,
+    padding: Spacing.two,
   },
   card: {
     ...CardShadow,

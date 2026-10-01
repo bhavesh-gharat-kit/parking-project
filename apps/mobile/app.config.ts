@@ -110,6 +110,19 @@ export default ({ config }: ConfigContext): ExpoConfig => {
        * client needs one rebuild — `npm run build:dev`.
        */
       'expo-notifications',
+      /**
+       * UPI payment-screenshot attachment (Phase 15). Camera and photo-library
+       * permission strings shown on Android's runtime permission dialog. Adding
+       * this plugin changes the native project, so the dev client needs one
+       * rebuild — `npm run build:dev`.
+       */
+      [
+        'expo-image-picker',
+        {
+          photosPermission: 'Pay & Park needs access to your photos to attach a payment screenshot.',
+          cameraPermission: 'Pay & Park needs access to your camera to take a photo of your payment screenshot.',
+        },
+      ],
     ],
 
     experiments: {

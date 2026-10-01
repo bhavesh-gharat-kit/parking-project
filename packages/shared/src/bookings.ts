@@ -69,7 +69,7 @@ import {
   type BookingStatus,
   type PaymentStatus,
 } from './enums';
-import { CuidSchema, UpiUtrSchema } from './schemas';
+import { CuidSchema, OptionalUpiUtrSchema } from './schemas';
 
 /* ═══════════════════════════ Booking transitions ═══════════════════════════ */
 
@@ -272,14 +272,20 @@ export const BookingPaymentMethodRequestSchema = z.object({
 export type BookingPaymentMethodRequest = z.input<typeof BookingPaymentMethodRequestSchema>;
 
 /**
- * `POST /api/bookings/:id/utr` (context.txt §306-336, Phase 06).
+ * `POST /api/bookings/:id/utr` (context.txt §306-336, Phase 06; Phase 15).
  *
  * Submitting this NEVER marks the payment `PAID` — see the header of
  * `apps/api/lib/bookings/transitions.ts`. It only moves the booking to
  * `PAYMENT_VERIFICATION` so an admin can check it (Phase 07).
+ *
+ * `utr` is optional here — the payment screenshot is the required evidence
+ * (enforced by `apps/api/app/api/bookings/[id]/utr/route.ts`, which this
+ * schema has no way to express since the screenshot is a file, not a field
+ * on this JSON-shaped object). Typing the UTR is now a bonus that makes the
+ * admin's bank-statement check faster, not a requirement.
  */
 export const BookingUtrSubmitRequestSchema = z.object({
-  utr: UpiUtrSchema,
+  utr: OptionalUpiUtrSchema,
 });
 export type BookingUtrSubmitRequest = z.input<typeof BookingUtrSubmitRequestSchema>;
 export type BookingUtrSubmitRequestParsed = z.output<typeof BookingUtrSubmitRequestSchema>;
@@ -323,6 +329,12 @@ export const BookingPaymentSchema = z.object({
   upiPayeeVpa: z.string().nullable(),
   /** §11 — the reference the customer read off their UPI app. A claim, not proof. */
   upiUtr: z.string().nullable(),
+  /**
+   * §278-336, Phase 15 — a payment-app screenshot the customer attached
+   * alongside the UTR. Optional supporting evidence for the admin, same
+   * standing as `upiUtr` itself: a claim, not proof (§32).
+   */
+  utrScreenshotUrl: z.string().nullable(),
   paidAt: z.string().nullable(),
 });
 export type BookingPayment = z.infer<typeof BookingPaymentSchema>;

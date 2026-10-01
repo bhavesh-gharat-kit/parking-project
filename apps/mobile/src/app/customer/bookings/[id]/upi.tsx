@@ -1,11 +1,18 @@
 /**
- * UPI QR payment screen (context.txt §278-336, Phase 06).
+ * UPI QR payment screen (context.txt §278-336, Phase 06; Phase 15).
  *
  * Two steps in one screen, gated by local state rather than two routes: the QR
- * + amount is shown first ("I have paid" reveals the UTR form), because until
- * the customer has actually paid there is nothing for a form to collect.
+ * + amount is shown first ("I have paid" reveals the proof-of-payment form),
+ * because until the customer has actually paid there is nothing for a form to
+ * collect.
  *
- * ── What submitting the UTR does NOT do ─────────────────────────────────────
+ * ── Screenshot required, UTR optional (Phase 15) ───────────────────────────
+ * The payment screenshot is the evidence the admin actually checks, so it is
+ * required — the backend rejects a submission without one. The UTR text
+ * field stays as an optional aid, not a second required field, since typing
+ * it is error-prone and the screenshot already contains it.
+ *
+ * ── What submitting this does NOT do ────────────────────────────────────────
  * It does not mark this booking paid. `POST /api/bookings/:id/utr` moves the
  * booking to `PAYMENT_VERIFICATION` — an admin still has to check the bank
  * statement (§11, §32, Phase 07). The copy on this screen says so explicitly so
@@ -17,11 +24,13 @@
  * right after a successful submit.
  */
 import { zodResolver } from '@hookform/resolvers/zod';
+import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
+import * as ImagePicker from 'expo-image-picker';
 import { router, Stack, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Alert, Pressable, StyleSheet, View } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 
 import {
@@ -40,6 +49,9 @@ import { useTheme } from '@/hooks/use-theme';
 import { ApiError, apiRequest } from '@/lib/api';
 import { applyApiError } from '@/lib/form-errors';
 
+/** What `apiRequest`'s `FormData` branch, and RN's own `FormData.append`, need. */
+type PickedScreenshot = { uri: string; name: string; type: string };
+
 export default function UpiPaymentScreen() {
   const theme = useTheme();
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -47,6 +59,7 @@ export default function UpiPaymentScreen() {
   const [booking, setBooking] = useState<Booking | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [havePaid, setHavePaid] = useState(false);
+  const [screenshot, setScreenshot] = useState<PickedScreenshot | null>(null);
 
   const {
     control,
@@ -78,10 +91,67 @@ export default function UpiPaymentScreen() {
     }, [load]),
   );
 
+  const captureFrom = async (source: 'camera' | 'library') => {
+    const permission =
+      source === 'camera'
+        ? await ImagePicker.requestCameraPermissionsAsync()
+        : await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+    if (!permission.granted) {
+      Alert.alert(
+        'Permission needed',
+        `Allow ${source === 'camera' ? 'camera' : 'photo library'} access to attach a screenshot.`,
+      );
+      return;
+    }
+
+    const result =
+      source === 'camera'
+        ? await ImagePicker.launchCameraAsync({ mediaTypes: ['images'], quality: 0.7 })
+        : await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.7 });
+
+    if (result.canceled || result.assets.length === 0) return;
+
+    const asset = result.assets[0];
+    const extension = asset.uri.split('.').pop()?.toLowerCase() ?? 'jpg';
+    const type =
+      asset.mimeType ??
+      (extension === 'png' ? 'image/png' : extension === 'webp' ? 'image/webp' : 'image/jpeg');
+
+    setScreenshot({ uri: asset.uri, name: asset.fileName ?? `utr-screenshot.${extension}`, type });
+  };
+
+  // §278-336, Phase 15 — the screenshot is the required evidence; `onSubmit`
+  // refuses to call the API without one.
+  const pickScreenshot = () => {
+    Alert.alert('Attach payment screenshot', 'Choose a source', [
+      { text: 'Camera', onPress: () => void captureFrom('camera') },
+      { text: 'Gallery', onPress: () => void captureFrom('library') },
+      { text: 'Cancel', style: 'cancel' },
+    ]);
+  };
+
   const onSubmit = async (values: BookingUtrSubmitRequestParsed) => {
     setFormError(null);
+
+    // The backend has no JSON-only path any more — a screenshot is always
+    // required, and a JSON body cannot carry a file — so this is checked
+    // before ever calling the API, not left for the server to reject.
+    if (!screenshot) {
+      setFormError('Attach a screenshot of your payment confirmation to continue.');
+      return;
+    }
+
     try {
-      await apiRequest<Booking>(`/api/bookings/${id}/utr`, { method: 'POST', body: values });
+      const form = new FormData();
+      if (values.utr) form.append('utr', values.utr);
+      // RN's FormData.append accepts a `{ uri, name, type }` file descriptor at
+      // runtime (see react-native's own FormData.d.ts) — TS resolves to the DOM
+      // lib's `Blob`-only overload instead because `expo/tsconfig.base` includes
+      // `"DOM"` in `lib`, so this cast is for the type checker, not the runtime.
+      form.append('screenshot', screenshot as unknown as Blob);
+
+      await apiRequest<Booking>(`/api/bookings/${id}/utr`, { method: 'POST', body: form });
       router.replace(`/customer/bookings/${id}`);
     } catch (error) {
       setFormError(applyApiError(error, setError));
@@ -152,9 +222,9 @@ export default function UpiPaymentScreen() {
         ) : (
           <View style={styles.form}>
             <ThemedText type="small" themeColor="textSecondary">
-              Enter the UPI reference number (UTR) from your payment app. We will
-              verify it against our bank statement before confirming your booking —
-              this does not confirm it immediately.
+              Attach a screenshot of your payment confirmation. We will verify it
+              against our bank statement before confirming your booking — this
+              does not confirm it immediately.
             </ThemedText>
 
             {formError ? (
@@ -170,10 +240,42 @@ export default function UpiPaymentScreen() {
               </View>
             ) : null}
 
+            <View style={styles.screenshotField}>
+              <ThemedText type="small" themeColor="textSecondary">
+                Payment screenshot
+              </ThemedText>
+
+              {screenshot ? (
+                <View style={styles.screenshotPreviewWrap}>
+                  <Image
+                    source={{ uri: screenshot.uri }}
+                    style={styles.screenshotPreview}
+                    contentFit="cover"
+                  />
+                  <View style={styles.screenshotActions}>
+                    <AppButton label="Retake" variant="secondary" onPress={pickScreenshot} />
+                    <Pressable
+                      onPress={() => setScreenshot(null)}
+                      style={[styles.removeButton, { backgroundColor: theme.backgroundElement }]}
+                    >
+                      <Ionicons name="close" size={18} color={theme.text} />
+                    </Pressable>
+                  </View>
+                </View>
+              ) : (
+                <AppButton
+                  label="Attach screenshot"
+                  variant="secondary"
+                  onPress={pickScreenshot}
+                  icon={<Ionicons name="camera-outline" size={18} color={theme.text} />}
+                />
+              )}
+            </View>
+
             <TextField
               control={control}
               name="utr"
-              label="UPI reference / UTR"
+              label="UPI reference / UTR (optional)"
               placeholder="e.g. 123456789012"
               autoCapitalize="characters"
               autoCorrect={false}
@@ -184,7 +286,7 @@ export default function UpiPaymentScreen() {
             <AppButton
               label="Submit for verification"
               loading={isSubmitting}
-              disabled={isSubmitting}
+              disabled={isSubmitting || !screenshot}
               onPress={handleSubmit(onSubmit)}
             />
           </View>
@@ -220,5 +322,24 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     borderWidth: StyleSheet.hairlineWidth,
     padding: Spacing.three,
+  },
+  screenshotField: { gap: Spacing.one },
+  screenshotPreviewWrap: { gap: Spacing.two },
+  screenshotPreview: {
+    width: 160,
+    height: 160,
+    borderRadius: 12,
+  },
+  screenshotActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
+  },
+  removeButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

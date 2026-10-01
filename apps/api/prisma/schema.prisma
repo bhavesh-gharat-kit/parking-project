@@ -426,6 +426,11 @@ model Payment {
   utrSubmittedAt DateTime?
   /// Which VPA the customer was shown, in case the branch's UPI ID changes later.
   upiPayeeVpa    String?   @db.VarChar(120)
+  /// Payment-app screenshot the customer attached alongside the UTR, uploaded to
+  /// media-host. Optional (§278-336, Phase 15) — supporting evidence for the
+  /// admin, never a replacement for manual verification against the bank
+  /// statement.
+  utrScreenshotUrl String? @db.Text
 
   // ── Cash-at-parking path (§12) ─────────────────────────────────────────
   /// When the admin physically took the cash.

@@ -67,6 +67,11 @@ export function setUnauthorizedHandler(handler: () => void) {
 
 type RequestOptions = {
   method?: 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE';
+  /**
+   * `FormData` is sent as-is (Phase 15 — the UTR screenshot upload): no
+   * `Content-Type` is set for it below, because fetch must choose the
+   * multipart boundary itself. Anything else is JSON-encoded as before.
+   */
   body?: unknown;
   /** Skips the Authorization header (sign-in, health check). */
   anonymous?: boolean;
@@ -78,8 +83,10 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
 
   const url = `${config.apiBaseUrl}${path.startsWith('/') ? path : `/${path}`}`;
 
+  const isFormData = body instanceof FormData;
+
   const headers: Record<string, string> = { Accept: 'application/json' };
-  if (body !== undefined) headers['Content-Type'] = 'application/json';
+  if (body !== undefined && !isFormData) headers['Content-Type'] = 'application/json';
 
   if (!anonymous) {
     const token = getAuthToken();
@@ -96,7 +103,7 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
     response = await fetch(url, {
       method,
       headers,
-      body: body === undefined ? undefined : JSON.stringify(body),
+      body: body === undefined ? undefined : isFormData ? (body as FormData) : JSON.stringify(body),
       signal: signal ?? timeout.signal,
     });
   } catch (error) {
