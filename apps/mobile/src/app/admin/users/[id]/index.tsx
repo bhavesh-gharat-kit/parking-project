@@ -10,27 +10,20 @@ import { useCallback, useState } from 'react';
 import { ActivityIndicator, Alert, FlatList, Pressable, RefreshControl, StyleSheet, View } from 'react-native';
 
 import {
-  BOOKING_STATUS_LABELS,
   formatInr,
   formatIstDateTime,
   type AdminBooking,
   type AdminUser,
-  type BookingStatus,
   type Paginated,
 } from '@parking/shared';
 
 import { AppButton } from '@/components/app-button';
 import { ScreenContainer } from '@/components/screen-container';
+import { StatusBadge } from '@/components/status-badge';
 import { ThemedText } from '@/components/themed-text';
-import { Spacing, type ThemeColor } from '@/constants/theme';
+import { CardShadow, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { ApiError, apiRequest } from '@/lib/api';
-
-function statusColor(status: BookingStatus): ThemeColor {
-  if (status === 'CONFIRMED' || status === 'COMPLETED') return 'primary';
-  if (status === 'REJECTED' || status === 'EXPIRED' || status === 'CANCELLED') return 'danger';
-  return 'textSecondary';
-}
 
 export default function AdminUserDetailScreen() {
   const theme = useTheme();
@@ -192,9 +185,7 @@ export default function AdminUserDetailScreen() {
               <ThemedText type="small" themeColor="textSecondary">
                 {formatIstDateTime(item.startTime)}
               </ThemedText>
-              <ThemedText type="small" themeColor={statusColor(item.status)}>
-                {BOOKING_STATUS_LABELS[item.status]}
-              </ThemedText>
+              <StatusBadge status={item.status} />
             </Pressable>
           )}
         />
@@ -216,6 +207,7 @@ const styles = StyleSheet.create({
   header: { gap: Spacing.three, marginBottom: Spacing.three },
   list: { gap: Spacing.two },
   card: {
+    ...CardShadow,
     borderRadius: 12,
     padding: Spacing.three,
     gap: Spacing.half,

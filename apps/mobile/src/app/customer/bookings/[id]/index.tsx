@@ -22,12 +22,12 @@
  * changes nothing on its own, because only the server may decide a booking
  * expired (the next sweep will say so, and the following refresh will show it).
  */
+import { Ionicons } from '@expo/vector-icons';
 import { router, Stack, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 
 import {
-  BOOKING_STATUS_LABELS,
   PAYMENT_METHOD_LABELS,
   PAYMENT_STATUS_LABELS,
   VEHICLE_TYPE_LABELS,
@@ -38,21 +38,14 @@ import {
   isReceiptEligible,
   isTerminalBookingStatus,
   type Booking,
-  type BookingStatus,
 } from '@parking/shared';
 
 import { AppButton } from '@/components/app-button';
+import { StatusBadge } from '@/components/status-badge';
 import { ThemedText } from '@/components/themed-text';
-import { Spacing, type ThemeColor } from '@/constants/theme';
+import { CardShadow, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { ApiError, apiRequest } from '@/lib/api';
-
-/** Which theme colour a status reads in. Confirmed is the only good news. */
-function statusColor(status: BookingStatus): ThemeColor {
-  if (status === 'CONFIRMED' || status === 'COMPLETED') return 'primary';
-  if (status === 'REJECTED' || status === 'EXPIRED' || status === 'CANCELLED') return 'danger';
-  return 'textSecondary';
-}
 
 type SummaryRow = { label: string; value: string };
 
@@ -229,9 +222,7 @@ export default function BookingSummaryScreen() {
             Booking number
           </ThemedText>
           <ThemedText type="subtitle">{booking.bookingNumber}</ThemedText>
-          <ThemedText type="smallBold" themeColor={statusColor(booking.status)}>
-            {BOOKING_STATUS_LABELS[booking.status]}
-          </ThemedText>
+          <StatusBadge status={booking.status} size="large" />
         </View>
 
         {countdownRunning && remaining !== null ? (
@@ -304,6 +295,7 @@ export default function BookingSummaryScreen() {
         <AppButton
           label="My bookings"
           variant="ghost"
+          icon={<Ionicons name="chevron-back" size={18} color={theme.text} />}
           onPress={() => router.replace('/customer/bookings')}
         />
       </ScrollView>
@@ -318,6 +310,7 @@ const styles = StyleSheet.create({
   },
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: Spacing.three },
   header: {
+    ...CardShadow,
     borderRadius: 12,
     padding: Spacing.three,
     gap: Spacing.half,
@@ -328,6 +321,7 @@ const styles = StyleSheet.create({
     padding: Spacing.three,
   },
   card: {
+    ...CardShadow,
     borderRadius: 12,
     paddingHorizontal: Spacing.three,
   },

@@ -21,7 +21,6 @@ import {
 } from 'react-native';
 
 import {
-  BOOKING_STATUS_LABELS,
   PAYMENT_METHOD_LABELS,
   formatInr,
   formatIstDateTime,
@@ -30,8 +29,9 @@ import {
   type Paginated,
 } from '@parking/shared';
 
+import { StatusBadge } from '@/components/status-badge';
 import { ThemedText } from '@/components/themed-text';
-import { Spacing, type ThemeColor } from '@/constants/theme';
+import { CardShadow, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { ApiError, apiRequest } from '@/lib/api';
 
@@ -44,12 +44,6 @@ const FILTERS: { value: QueueFilter; label: string }[] = [
   { value: 'REJECTED', label: 'Rejected' },
   { value: 'ALL', label: 'All' },
 ];
-
-function statusColor(status: BookingStatus): ThemeColor {
-  if (status === 'CONFIRMED' || status === 'COMPLETED') return 'primary';
-  if (status === 'REJECTED' || status === 'EXPIRED' || status === 'CANCELLED') return 'danger';
-  return 'textSecondary';
-}
 
 export default function AdminBookingsScreen() {
   const theme = useTheme();
@@ -158,10 +152,14 @@ export default function AdminBookingsScreen() {
               <ThemedText type="small" themeColor="textSecondary">
                 {formatIstDateTime(item.startTime)}
               </ThemedText>
-              <ThemedText type="small" themeColor={statusColor(item.status)}>
-                {BOOKING_STATUS_LABELS[item.status]}
-                {item.paymentMethod ? ` · ${PAYMENT_METHOD_LABELS[item.paymentMethod]}` : ''}
-              </ThemedText>
+              <View style={styles.statusRow}>
+                <StatusBadge status={item.status} />
+                {item.paymentMethod ? (
+                  <ThemedText type="small" themeColor="textSecondary">
+                    {PAYMENT_METHOD_LABELS[item.paymentMethod]}
+                  </ThemedText>
+                ) : null}
+              </View>
             </Pressable>
           )}
         />
@@ -200,6 +198,7 @@ const styles = StyleSheet.create({
   loading: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   list: { gap: Spacing.two },
   card: {
+    ...CardShadow,
     borderRadius: 12,
     padding: Spacing.three,
     gap: Spacing.half,
@@ -208,6 +207,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+  },
+  statusRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
   },
   banner: {
     borderRadius: 10,

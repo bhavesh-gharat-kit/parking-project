@@ -14,7 +14,7 @@ import { ActivityIndicator, FlatList, Pressable, StyleSheet, View } from 'react-
 import type { ParkingLocation } from '@parking/shared';
 
 import { ThemedText } from '@/components/themed-text';
-import { Spacing } from '@/constants/theme';
+import { CardShadow, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { apiRequest, ApiError } from '@/lib/api';
 import { useBookingDraftStore } from '@/stores/booking-draft-store';
@@ -105,6 +105,7 @@ const styles = StyleSheet.create({
     gap: Spacing.two,
   },
   card: {
+    ...CardShadow,
     borderRadius: 12,
     padding: Spacing.three,
     gap: Spacing.half,

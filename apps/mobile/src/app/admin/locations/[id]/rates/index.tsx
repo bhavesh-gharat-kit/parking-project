@@ -19,7 +19,7 @@ import {
 import { AppButton } from '@/components/app-button';
 import { ScreenContainer } from '@/components/screen-container';
 import { ThemedText } from '@/components/themed-text';
-import { Spacing } from '@/constants/theme';
+import { CardShadow, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { apiRequest, ApiError } from '@/lib/api';
 
@@ -162,6 +162,7 @@ const styles = StyleSheet.create({
     gap: Spacing.two,
   },
   card: {
+    ...CardShadow,
     borderRadius: 12,
     padding: Spacing.three,
     flexDirection: 'row',

@@ -33,7 +33,7 @@ import {
 
 import { AppButton } from '@/components/app-button';
 import { ThemedText } from '@/components/themed-text';
-import { Spacing } from '@/constants/theme';
+import { CardShadow, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { ApiError, apiRequest } from '@/lib/api';
 
@@ -207,12 +207,14 @@ const styles = StyleSheet.create({
   },
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: Spacing.three },
   header: {
+    ...CardShadow,
     borderRadius: 12,
     padding: Spacing.three,
     gap: Spacing.half,
   },
   bookingNumber: { marginTop: Spacing.two },
   card: {
+    ...CardShadow,
     borderRadius: 12,
     paddingHorizontal: Spacing.three,
   },

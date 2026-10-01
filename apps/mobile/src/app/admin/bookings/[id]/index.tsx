@@ -19,7 +19,6 @@ import { ActivityIndicator, Alert, RefreshControl, StyleSheet, TextInput, View }
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 
 import {
-  BOOKING_STATUS_LABELS,
   PAYMENT_METHOD_LABELS,
   PAYMENT_STATUS_LABELS,
   VEHICLE_TYPE_LABELS,
@@ -30,16 +29,11 @@ import {
 } from '@parking/shared';
 
 import { AppButton } from '@/components/app-button';
+import { StatusBadge } from '@/components/status-badge';
 import { ThemedText } from '@/components/themed-text';
-import { Spacing, type ThemeColor } from '@/constants/theme';
+import { CardShadow, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { ApiError, apiRequest } from '@/lib/api';
-
-function statusColor(status: BookingStatus): ThemeColor {
-  if (status === 'CONFIRMED' || status === 'COMPLETED') return 'primary';
-  if (status === 'REJECTED' || status === 'EXPIRED' || status === 'CANCELLED') return 'danger';
-  return 'textSecondary';
-}
 
 /** Whether an admin decision is even possible right now (§14's table agrees). */
 function isActionable(status: BookingStatus): boolean {
@@ -211,9 +205,7 @@ export default function AdminBookingDetailScreen() {
             Booking number
           </ThemedText>
           <ThemedText type="subtitle">{booking.bookingNumber}</ThemedText>
-          <ThemedText type="smallBold" themeColor={statusColor(booking.status)}>
-            {BOOKING_STATUS_LABELS[booking.status]}
-          </ThemedText>
+          <StatusBadge status={booking.status} size="large" />
         </View>
 
         {booking.payment?.upiUtr ? (
@@ -293,6 +285,7 @@ const styles = StyleSheet.create({
   },
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: Spacing.three },
   header: {
+    ...CardShadow,
     borderRadius: 12,
     padding: Spacing.three,
     gap: Spacing.half,
@@ -308,6 +301,7 @@ const styles = StyleSheet.create({
     lineHeight: 32,
   },
   card: {
+    ...CardShadow,
     borderRadius: 12,
     paddingHorizontal: Spacing.three,
   },

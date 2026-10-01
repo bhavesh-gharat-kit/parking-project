@@ -7,6 +7,7 @@
  * one active branch today, so a location heading only appears once there is
  * more than one to tell apart.
  */
+import { Ionicons } from '@expo/vector-icons';
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
@@ -15,7 +16,7 @@ import { formatInr, type AdminDashboardSummary } from '@parking/shared';
 
 import { AppButton } from '@/components/app-button';
 import { ThemedText } from '@/components/themed-text';
-import { Spacing } from '@/constants/theme';
+import { CardShadow, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { ApiError, apiRequest } from '@/lib/api';
 import { useAuthStore } from '@/stores/auth-store';
@@ -71,10 +72,8 @@ export default function AdminHomeScreen() {
         <RefreshControl refreshing={refreshing} onRefresh={() => void refresh()} tintColor={theme.text} />
       }
     >
-      <ThemedText type="subtitle">Admin</ThemedText>
-
       <View style={[styles.card, { backgroundColor: theme.backgroundElement }]}>
-        <ThemedText type="smallBold">{user?.name ?? 'Signed in'}</ThemedText>
+        <ThemedText type="smallBold">Welcome back{user?.name ? `, ${user.name}` : ''}</ThemedText>
         <ThemedText type="small" themeColor="textSecondary">
           {user?.email}
         </ThemedText>
@@ -116,12 +115,25 @@ export default function AdminHomeScreen() {
         </View>
       ) : null}
 
-      <AppButton label="Booking approvals" onPress={() => router.push('/admin/bookings')} />
-      <AppButton label="Reports" onPress={() => router.push('/admin/reports')} />
-      <AppButton label="Users" onPress={() => router.push('/admin/users')} />
+      <AppButton
+        label="Booking approvals"
+        icon={<Ionicons name="checkmark-done-outline" size={20} color={theme.onPrimary} />}
+        onPress={() => router.push('/admin/bookings')}
+      />
+      <AppButton
+        label="Reports"
+        icon={<Ionicons name="bar-chart-outline" size={20} color={theme.onPrimary} />}
+        onPress={() => router.push('/admin/reports')}
+      />
+      <AppButton
+        label="Users"
+        icon={<Ionicons name="people-outline" size={20} color={theme.onPrimary} />}
+        onPress={() => router.push('/admin/users')}
+      />
       <AppButton
         label="Locations & rates"
         variant="secondary"
+        icon={<Ionicons name="business-outline" size={20} color={theme.text} />}
         onPress={() => router.push('/admin/locations')}
       />
 
@@ -136,6 +148,7 @@ const styles = StyleSheet.create({
     gap: Spacing.three,
   },
   card: {
+    ...CardShadow,
     borderRadius: 12,
     padding: Spacing.three,
     gap: Spacing.one,
@@ -149,12 +162,14 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   tile: {
+    ...CardShadow,
     flexBasis: '47%',
     borderRadius: 12,
     padding: Spacing.three,
     gap: Spacing.half,
   },
   revenueCard: {
+    ...CardShadow,
     borderRadius: 12,
     padding: Spacing.three,
     gap: Spacing.half,

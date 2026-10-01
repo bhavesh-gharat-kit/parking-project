@@ -75,3 +75,19 @@ export const Spacing = {
 } as const;
 
 export const MaxContentWidth = 800;
+
+/**
+ * Subtle elevation for `backgroundElement` cards — without it, dark mode is
+ * flat black-on-near-black with no visible depth (`01-ui-ux-findings.md`,
+ * "P2 — No visual language for professional beyond icons"). `elevation` alone
+ * covers Android; iOS/web also need the `shadow*` properties.
+ */
+export const CardShadow = Platform.select({
+  android: { elevation: 2 },
+  default: {
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.12,
+    shadowRadius: 3,
+  },
+});

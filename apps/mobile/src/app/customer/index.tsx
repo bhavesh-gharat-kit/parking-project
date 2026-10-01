@@ -3,16 +3,16 @@
  *
  * The two entry points that matter are "Book parking" (which starts the §9 flow:
  * location → vehicle → package → summary) and "My bookings" (which is how a
- * customer gets back to a booking's summary afterwards). Payment, admin approval
- * and the receipt are Phases 06-08.
+ * customer gets back to a booking's summary afterwards).
  */
+import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 
 import { AppButton } from '@/components/app-button';
 import { ScreenContainer } from '@/components/screen-container';
 import { ThemedText } from '@/components/themed-text';
-import { Spacing } from '@/constants/theme';
+import { CardShadow, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useAuthStore } from '@/stores/auth-store';
 
@@ -23,38 +23,43 @@ export default function CustomerHomeScreen() {
 
   return (
     <ScreenContainer>
-      <ThemedText type="subtitle">Customer</ThemedText>
-
       <View style={[styles.card, { backgroundColor: theme.backgroundElement }]}>
-        <ThemedText type="smallBold">{user?.name ?? 'Signed in'}</ThemedText>
+        <ThemedText type="smallBold">Welcome back{user?.name ? `, ${user.name}` : ''}</ThemedText>
         <ThemedText type="small" themeColor="textSecondary">
           {user?.email}
         </ThemedText>
       </View>
 
       <View style={styles.menu}>
-        <AppButton label="Book parking" onPress={() => router.push('/customer/book')} />
+        <AppButton
+          label="Book parking"
+          icon={<Ionicons name="location-outline" size={20} color={theme.onPrimary} />}
+          onPress={() => router.push('/customer/book')}
+        />
         <AppButton
           label="My bookings"
           variant="secondary"
+          icon={<Ionicons name="receipt-outline" size={20} color={theme.text} />}
           onPress={() => router.push('/customer/bookings')}
         />
         <AppButton
           label="My vehicles"
           variant="secondary"
+          icon={<Ionicons name="car-outline" size={20} color={theme.text} />}
           onPress={() => router.push('/customer/vehicles')}
         />
         <AppButton
           label="My profile"
           variant="secondary"
+          icon={<Ionicons name="person-outline" size={20} color={theme.text} />}
           onPress={() => router.push('/customer/profile')}
         />
       </View>
 
       <ThemedText type="small" themeColor="textSecondary">
-        Booking is live end to end: the parking decides the price, and an
-        unfinished booking is released after 10 minutes. Choosing how to pay and
-        the digital receipt arrive in the next releases.
+        Book a slot, pay by UPI or cash, and track your booking status and
+        receipt right here — an unfinished booking is released after 10
+        minutes if it&apos;s not completed.
       </ThemedText>
 
       <View style={styles.spacer} />
@@ -66,6 +71,7 @@ export default function CustomerHomeScreen() {
 
 const styles = StyleSheet.create({
   card: {
+    ...CardShadow,
     borderRadius: 12,
     padding: Spacing.three,
     gap: Spacing.one,

@@ -20,7 +20,7 @@ import { Link } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
-import { Spacing } from '@/constants/theme';
+import { CardShadow, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
 export default function ForgotPasswordScreen() {
@@ -58,6 +58,7 @@ const styles = StyleSheet.create({
     gap: Spacing.three,
   },
   card: {
+    ...CardShadow,
     borderRadius: 12,
     padding: Spacing.three,
     gap: Spacing.one,

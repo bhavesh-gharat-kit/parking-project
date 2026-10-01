@@ -9,6 +9,7 @@
  * the booking already moved on comes back as a readable error rather than a
  * silent no-op.
  */
+import { Ionicons } from '@expo/vector-icons';
 import { router, Stack, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
@@ -18,13 +19,21 @@ import { PAYMENT_METHOD_LABELS, formatInr, type Booking, type PaymentMethod } fr
 import { AppButton } from '@/components/app-button';
 import { ScreenContainer } from '@/components/screen-container';
 import { ThemedText } from '@/components/themed-text';
-import { Spacing } from '@/constants/theme';
+import { CardShadow, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { ApiError, apiRequest } from '@/lib/api';
 
-const METHODS: { method: PaymentMethod; description: string }[] = [
-  { method: 'UPI', description: 'Pay now by scanning a QR code with any UPI app.' },
-  { method: 'CASH', description: 'Pay in cash when you arrive at the parking location.' },
+const METHODS: {
+  method: PaymentMethod;
+  description: string;
+  icon: keyof typeof Ionicons.glyphMap;
+}[] = [
+  { method: 'UPI', description: 'Pay now by scanning a QR code with any UPI app.', icon: 'qr-code-outline' },
+  {
+    method: 'CASH',
+    description: 'Pay in cash when you arrive at the parking location.',
+    icon: 'cash-outline',
+  },
 ];
 
 export default function ChoosePaymentMethodScreen() {
@@ -109,7 +118,7 @@ export default function ChoosePaymentMethodScreen() {
         </ThemedText>
 
         <View style={styles.list}>
-          {METHODS.map(({ method, description }) => (
+          {METHODS.map(({ method, description, icon }) => (
             <Pressable
               key={method}
               onPress={() => setSelected(method)}
@@ -121,7 +130,10 @@ export default function ChoosePaymentMethodScreen() {
                 },
               ]}
             >
-              <ThemedText type="smallBold">{PAYMENT_METHOD_LABELS[method]}</ThemedText>
+              <View style={styles.methodHeader}>
+                <Ionicons name={icon} size={22} color={theme.primary} />
+                <ThemedText type="smallBold">{PAYMENT_METHOD_LABELS[method]}</ThemedText>
+              </View>
               <ThemedText type="small" themeColor="textSecondary">
                 {description}
               </ThemedText>
@@ -157,9 +169,15 @@ const styles = StyleSheet.create({
   centered: { alignItems: 'center', justifyContent: 'center', gap: Spacing.three },
   list: { gap: Spacing.two },
   card: {
+    ...CardShadow,
     borderRadius: 12,
     padding: Spacing.three,
     gap: Spacing.half,
+  },
+  methodHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
   },
   banner: {
     borderRadius: 10,

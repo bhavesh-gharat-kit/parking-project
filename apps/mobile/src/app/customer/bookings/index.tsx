@@ -20,28 +20,21 @@ import { useCallback, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, RefreshControl, StyleSheet, View } from 'react-native';
 
 import {
-  BOOKING_STATUS_LABELS,
   PAYMENT_STATUS_LABELS,
   formatInr,
   formatIstDateTime,
   isReceiptEligible,
   type Booking,
-  type BookingStatus,
   type Paginated,
 } from '@parking/shared';
 
 import { AppButton } from '@/components/app-button';
 import { ScreenContainer } from '@/components/screen-container';
+import { StatusBadge } from '@/components/status-badge';
 import { ThemedText } from '@/components/themed-text';
-import { Spacing, type ThemeColor } from '@/constants/theme';
+import { CardShadow, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { ApiError, apiRequest } from '@/lib/api';
-
-function statusColor(status: BookingStatus): ThemeColor {
-  if (status === 'CONFIRMED' || status === 'COMPLETED') return 'primary';
-  if (status === 'REJECTED' || status === 'EXPIRED' || status === 'CANCELLED') return 'danger';
-  return 'textSecondary';
-}
 
 export default function BookingsScreen() {
   const theme = useTheme();
@@ -112,10 +105,14 @@ export default function BookingsScreen() {
               <ThemedText type="small" themeColor="textSecondary">
                 {formatIstDateTime(item.startTime)}
               </ThemedText>
-              <ThemedText type="small" themeColor={statusColor(item.status)}>
-                {BOOKING_STATUS_LABELS[item.status]}
-                {item.payment ? ` · Payment: ${PAYMENT_STATUS_LABELS[item.payment.status]}` : ''}
-              </ThemedText>
+              <View style={styles.statusRow}>
+                <StatusBadge status={item.status} />
+                {item.payment ? (
+                  <ThemedText type="small" themeColor="textSecondary">
+                    Payment: {PAYMENT_STATUS_LABELS[item.payment.status]}
+                  </ThemedText>
+                ) : null}
+              </View>
               {isReceiptEligible(item.status) ? (
                 <Pressable
                   onPress={() => router.push(`/customer/bookings/${item.id}/receipt`)}
@@ -150,6 +147,7 @@ const styles = StyleSheet.create({
   loading: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   list: { gap: Spacing.two },
   card: {
+    ...CardShadow,
     borderRadius: 12,
     padding: Spacing.three,
     gap: Spacing.half,
@@ -158,6 +156,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+  },
+  statusRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
   },
   banner: {
     borderRadius: 10,
