@@ -18,3 +18,7 @@
 # TypeScript
 *.tsbuildinfo
 next-env.d.ts
+
+# The sideloaded APK /download-apk serves (see public/README.md) — a large
+# binary that changes every release, not something to version-control.
+public/*.apk
