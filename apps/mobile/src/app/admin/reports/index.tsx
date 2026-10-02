@@ -8,6 +8,7 @@
  * scope for launch (`_/prompts/10-admin-dashboard-reports.md`) — these are
  * on-screen numbers only.
  */
+import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, StyleSheet, TextInput, View } from 'react-native';
@@ -23,8 +24,10 @@ import {
 } from '@parking/shared';
 
 import { AppButton } from '@/components/app-button';
+import { Card } from '@/components/card';
+import { Divider } from '@/components/divider';
 import { ThemedText } from '@/components/themed-text';
-import { CardShadow, Spacing } from '@/constants/theme';
+import { Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { ApiError, apiRequest } from '@/lib/api';
 
@@ -49,6 +52,8 @@ export default function AdminReportsScreen() {
   const [report, setReport] = useState<AdminReport | null>(null);
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [dateFromFocused, setDateFromFocused] = useState(false);
+  const [dateToFocused, setDateToFocused] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -85,23 +90,35 @@ export default function AdminReportsScreen() {
         <TextInput
           value={dateFromInput}
           onChangeText={setDateFromInput}
+          onFocus={() => setDateFromFocused(true)}
+          onBlur={() => setDateFromFocused(false)}
           placeholder="From (YYYY-MM-DD)"
           placeholderTextColor={theme.textSecondary}
           autoCapitalize="none"
           style={[
             styles.dateInput,
-            { color: theme.text, backgroundColor: theme.backgroundElement, borderColor: theme.border },
+            {
+              color: theme.text,
+              backgroundColor: dateFromFocused ? theme.background : theme.backgroundElement,
+              borderColor: dateFromFocused ? theme.primary : theme.borderStrong,
+            },
           ]}
         />
         <TextInput
           value={dateToInput}
           onChangeText={setDateToInput}
+          onFocus={() => setDateToFocused(true)}
+          onBlur={() => setDateToFocused(false)}
           placeholder="To (YYYY-MM-DD)"
           placeholderTextColor={theme.textSecondary}
           autoCapitalize="none"
           style={[
             styles.dateInput,
-            { color: theme.text, backgroundColor: theme.backgroundElement, borderColor: theme.border },
+            {
+              color: theme.text,
+              backgroundColor: dateToFocused ? theme.background : theme.backgroundElement,
+              borderColor: dateToFocused ? theme.primary : theme.borderStrong,
+            },
           ]}
         />
       </View>
@@ -134,7 +151,7 @@ export default function AdminReportsScreen() {
         </View>
       ) : (
         report?.locations.map((location) => (
-          <View key={location.locationId} style={[styles.card, { backgroundColor: theme.backgroundElement }]}>
+          <Card key={location.locationId}>
             {report.locations.length > 1 ? (
               <ThemedText type="smallBold">{location.locationName}</ThemedText>
             ) : null}
@@ -144,7 +161,7 @@ export default function AdminReportsScreen() {
             <StatRow label="Rejected" value={String(location.rejectedBookings)} />
             <StatRow label="Cancelled" value={String(location.cancelledBookings)} />
 
-            <View style={[styles.divider, { backgroundColor: theme.border }]} />
+            <Divider />
 
             <StatRow label="Total revenue" value={formatInr(location.totalRevenueInPaise)} />
             {PAYMENT_METHODS.map((method) => (
@@ -155,7 +172,7 @@ export default function AdminReportsScreen() {
               />
             ))}
 
-            <View style={[styles.divider, { backgroundColor: theme.border }]} />
+            <Divider />
 
             {VEHICLE_TYPES.map((vehicleType) => (
               <StatRow
@@ -164,13 +181,14 @@ export default function AdminReportsScreen() {
                 value={formatInr(location.revenueByVehicleType[vehicleType])}
               />
             ))}
-          </View>
+          </Card>
         ))
       )}
 
       {loadError ? (
         <View style={[styles.banner, { backgroundColor: theme.backgroundElement, borderColor: theme.danger }]}>
-          <ThemedText type="small" themeColor="danger">
+          <Ionicons name="alert-circle" size={18} color={theme.danger} />
+          <ThemedText type="small" themeColor="danger" style={styles.bannerText}>
             {loadError}
           </ThemedText>
         </View>
@@ -187,25 +205,23 @@ const styles = StyleSheet.create({
   filterRow: { flexDirection: 'row', gap: Spacing.two },
   dateInput: {
     flex: 1,
-    borderRadius: 10,
-    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: Radius.control,
+    borderWidth: 1.5,
     paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.two,
+    paddingVertical: Spacing.three,
     fontSize: 16,
+    minHeight: 48,
   },
   filterActions: { flexDirection: 'row', gap: Spacing.two },
   loading: { paddingVertical: Spacing.five, alignItems: 'center' },
-  card: {
-    ...CardShadow,
-    borderRadius: 12,
-    padding: Spacing.three,
-    gap: Spacing.one,
-  },
   row: { flexDirection: 'row', justifyContent: 'space-between' },
-  divider: { height: StyleSheet.hairlineWidth },
   banner: {
-    borderRadius: 10,
-    borderWidth: StyleSheet.hairlineWidth,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
+    borderRadius: Radius.control,
+    borderWidth: 1,
     padding: Spacing.three,
   },
+  bannerText: { flex: 1 },
 });

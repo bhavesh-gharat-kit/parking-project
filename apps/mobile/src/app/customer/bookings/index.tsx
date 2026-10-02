@@ -15,6 +15,7 @@
  * "Pending Approval · Pending", and collapsing them into one line would lose
  * exactly the distinction a customer is waiting on.
  */
+import { Ionicons } from '@expo/vector-icons';
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, RefreshControl, StyleSheet, View } from 'react-native';
@@ -29,10 +30,11 @@ import {
 } from '@parking/shared';
 
 import { AppButton } from '@/components/app-button';
+import { Card } from '@/components/card';
 import { ScreenContainer } from '@/components/screen-container';
 import { StatusBadge } from '@/components/status-badge';
 import { ThemedText } from '@/components/themed-text';
-import { CardShadow, Spacing } from '@/constants/theme';
+import { Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { ApiError, apiRequest } from '@/lib/api';
 
@@ -83,46 +85,48 @@ export default function BookingsScreen() {
           }
           ListEmptyComponent={
             bookings === null ? null : (
-              <ThemedText themeColor="textSecondary">
-                No bookings yet. Book parking and it will show up here.
-              </ThemedText>
+              <View style={styles.empty}>
+                <Ionicons name="receipt-outline" size={32} color={theme.textSecondary} />
+                <ThemedText themeColor="textSecondary">
+                  No bookings yet. Book parking and it will show up here.
+                </ThemedText>
+              </View>
             )
           }
           renderItem={({ item }) => (
-            <Pressable
-              onPress={() => router.push(`/customer/bookings/${item.id}`)}
-              style={[styles.card, { backgroundColor: theme.backgroundElement }]}
-            >
-              <View style={styles.cardHeader}>
-                <ThemedText type="smallBold">{item.bookingNumber}</ThemedText>
-                <ThemedText type="smallBold" themeColor="primary">
-                  {formatInr(item.amountInPaise)}
+            <Pressable onPress={() => router.push(`/customer/bookings/${item.id}`)}>
+              <Card>
+                <View style={styles.cardHeader}>
+                  <ThemedText type="smallBold">{item.bookingNumber}</ThemedText>
+                  <ThemedText type="smallBold" themeColor="primary">
+                    {formatInr(item.amountInPaise)}
+                  </ThemedText>
+                </View>
+                <ThemedText type="small" themeColor="textSecondary">
+                  {item.location.name} · {item.vehicleNumber} · {item.rateLabel}
                 </ThemedText>
-              </View>
-              <ThemedText type="small" themeColor="textSecondary">
-                {item.location.name} · {item.vehicleNumber} · {item.rateLabel}
-              </ThemedText>
-              <ThemedText type="small" themeColor="textSecondary">
-                {formatIstDateTime(item.startTime)}
-              </ThemedText>
-              <View style={styles.statusRow}>
-                <StatusBadge status={item.status} />
-                {item.payment ? (
-                  <ThemedText type="small" themeColor="textSecondary">
-                    Payment: {PAYMENT_STATUS_LABELS[item.payment.status]}
-                  </ThemedText>
+                <ThemedText type="small" themeColor="textSecondary">
+                  {formatIstDateTime(item.startTime)}
+                </ThemedText>
+                <View style={styles.statusRow}>
+                  <StatusBadge status={item.status} />
+                  {item.payment ? (
+                    <ThemedText type="small" themeColor="textSecondary">
+                      Payment: {PAYMENT_STATUS_LABELS[item.payment.status]}
+                    </ThemedText>
+                  ) : null}
+                </View>
+                {isReceiptEligible(item.status) ? (
+                  <Pressable
+                    onPress={() => router.push(`/customer/bookings/${item.id}/receipt`)}
+                    hitSlop={8}
+                  >
+                    <ThemedText type="small" themeColor="primary">
+                      View receipt
+                    </ThemedText>
+                  </Pressable>
                 ) : null}
-              </View>
-              {isReceiptEligible(item.status) ? (
-                <Pressable
-                  onPress={() => router.push(`/customer/bookings/${item.id}/receipt`)}
-                  hitSlop={8}
-                >
-                  <ThemedText type="small" themeColor="primary">
-                    View receipt
-                  </ThemedText>
-                </Pressable>
-              ) : null}
+              </Card>
             </Pressable>
           )}
         />
@@ -132,7 +136,8 @@ export default function BookingsScreen() {
         <View
           style={[styles.banner, { backgroundColor: theme.backgroundElement, borderColor: theme.danger }]}
         >
-          <ThemedText type="small" themeColor="danger">
+          <Ionicons name="alert-circle" size={18} color={theme.danger} />
+          <ThemedText type="small" themeColor="danger" style={styles.bannerText}>
             {loadError}
           </ThemedText>
         </View>
@@ -146,12 +151,7 @@ export default function BookingsScreen() {
 const styles = StyleSheet.create({
   loading: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   list: { gap: Spacing.two },
-  card: {
-    ...CardShadow,
-    borderRadius: 12,
-    padding: Spacing.three,
-    gap: Spacing.half,
-  },
+  empty: { alignItems: 'center', gap: Spacing.two, paddingVertical: Spacing.five },
   cardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -163,8 +163,12 @@ const styles = StyleSheet.create({
     gap: Spacing.two,
   },
   banner: {
-    borderRadius: 10,
-    borderWidth: StyleSheet.hairlineWidth,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
+    borderRadius: Radius.control,
+    borderWidth: 1,
     padding: Spacing.three,
   },
+  bannerText: { flex: 1 },
 });

@@ -41,9 +41,10 @@ import {
 } from '@parking/shared';
 
 import { AppButton } from '@/components/app-button';
+import { Card } from '@/components/card';
 import { StatusBadge } from '@/components/status-badge';
 import { ThemedText } from '@/components/themed-text';
-import { CardShadow, Spacing } from '@/constants/theme';
+import { Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { ApiError, apiRequest } from '@/lib/api';
 
@@ -217,13 +218,13 @@ export default function BookingSummaryScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={() => void refresh()} tintColor={theme.text} />
         }
       >
-        <View style={[styles.header, { backgroundColor: theme.backgroundElement }]}>
+        <Card>
           <ThemedText type="small" themeColor="textSecondary">
             Booking number
           </ThemedText>
           <ThemedText type="subtitle">{booking.bookingNumber}</ThemedText>
           <StatusBadge status={booking.status} size="large" />
-        </View>
+        </Card>
 
         {countdownRunning && remaining !== null ? (
           <View style={[styles.notice, { backgroundColor: theme.backgroundElement, borderColor: theme.border }]}>
@@ -235,11 +236,11 @@ export default function BookingSummaryScreen() {
           </View>
         ) : null}
 
-        <View style={[styles.card, { backgroundColor: theme.backgroundElement }]}>
+        <Card padded={false} style={styles.rowsCard}>
           {rows.map((row, index) => (
             <SummaryRowView key={row.label} row={row} first={index === 0} />
           ))}
-        </View>
+        </Card>
 
         {booking.status === 'PENDING' ? (
           <AppButton
@@ -309,20 +310,12 @@ const styles = StyleSheet.create({
     gap: Spacing.three,
   },
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: Spacing.three },
-  header: {
-    ...CardShadow,
-    borderRadius: 12,
-    padding: Spacing.three,
-    gap: Spacing.half,
-  },
   notice: {
-    borderRadius: 10,
-    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: Radius.control,
+    borderWidth: 1,
     padding: Spacing.three,
   },
-  card: {
-    ...CardShadow,
-    borderRadius: 12,
+  rowsCard: {
     paddingHorizontal: Spacing.three,
   },
   row: {

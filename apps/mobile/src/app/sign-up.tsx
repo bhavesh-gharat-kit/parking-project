@@ -8,6 +8,7 @@
  * The account is always a `USER`. Nothing on this form, and no field in
  * `RegisterRequestSchema`, can say otherwise (context.txt §110-112).
  */
+import { Ionicons } from '@expo/vector-icons';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Link, router } from 'expo-router';
 import { useState } from 'react';
@@ -22,9 +23,10 @@ import {
 } from '@parking/shared';
 
 import { AppButton } from '@/components/app-button';
+import { BrandHeader } from '@/components/brand-header';
 import { TextField } from '@/components/text-field';
 import { ThemedText } from '@/components/themed-text';
-import { Spacing } from '@/constants/theme';
+import { Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { applyApiError } from '@/lib/form-errors';
 import { useAuthStore } from '@/stores/auth-store';
@@ -63,16 +65,19 @@ export default function SignUpScreen() {
       keyboardShouldPersistTaps="handled"
       bottomOffset={Spacing.four}
     >
+      <BrandHeader variant="large" style={styles.brand} />
+
       <View style={styles.header}>
-        <ThemedText type="subtitle">Create account</ThemedText>
-        <ThemedText themeColor="textSecondary">
+        <ThemedText type="heading">Create account</ThemedText>
+        <ThemedText type="small" themeColor="textSecondary" style={styles.centered}>
           You will need this to book parking and get your receipt.
         </ThemedText>
       </View>
 
       {formError ? (
         <View style={[styles.banner, { backgroundColor: theme.backgroundElement, borderColor: theme.danger }]}>
-          <ThemedText type="small" themeColor="danger">
+          <Ionicons name="alert-circle" size={18} color={theme.danger} />
+          <ThemedText type="small" themeColor="danger" style={styles.bannerText}>
             {formError}
           </ThemedText>
         </View>
@@ -156,12 +161,18 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     justifyContent: 'center',
   },
-  header: { gap: Spacing.one },
+  brand: { marginBottom: Spacing.two },
+  header: { gap: Spacing.one, alignItems: 'center' },
+  centered: { textAlign: 'center' },
   banner: {
-    borderRadius: 10,
-    borderWidth: StyleSheet.hairlineWidth,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
+    borderRadius: Radius.control,
+    borderWidth: 1,
     padding: Spacing.three,
   },
+  bannerText: { flex: 1 },
   footer: {
     flexDirection: 'row',
     justifyContent: 'center',

@@ -17,50 +17,57 @@
  * endpoint arrives in Phase 04; `business.supportPhone` is already seeded for it.
  */
 import { Link } from 'expo-router';
-import { StyleSheet, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 
+import { BrandHeader } from '@/components/brand-header';
+import { Card } from '@/components/card';
 import { ThemedText } from '@/components/themed-text';
-import { CardShadow, Spacing } from '@/constants/theme';
+import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
 export default function ForgotPasswordScreen() {
   const theme = useTheme();
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.background }]}>
-      <ThemedText type="subtitle">Forgot password</ThemedText>
+    <ScrollView
+      style={[styles.flex, { backgroundColor: theme.background }]}
+      contentContainerStyle={styles.content}
+    >
+      <BrandHeader variant="large" style={styles.brand} />
 
-      <ThemedText themeColor="textSecondary">
-        Self-service password reset is not available yet. Please contact the parking office and
-        an administrator will reset it for you.
-      </ThemedText>
+      <View style={styles.header}>
+        <ThemedText type="heading">Forgot password</ThemedText>
+        <ThemedText type="small" themeColor="textSecondary" style={styles.centered}>
+          Self-service password reset is not available yet. Please contact the parking office
+          and an administrator will reset it for you.
+        </ThemedText>
+      </View>
 
-      <View style={[styles.card, { backgroundColor: theme.backgroundElement }]}>
+      <Card>
         <ThemedText type="smallBold">If you signed in with Google</ThemedText>
         <ThemedText type="small" themeColor="textSecondary">
           Your account has no password — use the “Sign in with Google” button instead.
         </ThemedText>
-      </View>
+      </Card>
 
       <Link href="/sign-in" asChild>
-        <ThemedText type="small" themeColor="primary">
+        <ThemedText type="small" themeColor="primary" style={styles.centered}>
           Back to sign in
         </ThemedText>
       </Link>
-    </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
+  flex: { flex: 1 },
+  content: {
     padding: Spacing.four,
     gap: Spacing.three,
+    flexGrow: 1,
+    justifyContent: 'center',
   },
-  card: {
-    ...CardShadow,
-    borderRadius: 12,
-    padding: Spacing.three,
-    gap: Spacing.one,
-  },
+  brand: { marginBottom: Spacing.two },
+  header: { gap: Spacing.one, alignItems: 'center' },
+  centered: { textAlign: 'center' },
 });

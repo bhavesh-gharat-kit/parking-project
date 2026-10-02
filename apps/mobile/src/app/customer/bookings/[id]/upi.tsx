@@ -42,9 +42,10 @@ import {
 } from '@parking/shared';
 
 import { AppButton } from '@/components/app-button';
+import { Card } from '@/components/card';
 import { TextField } from '@/components/text-field';
 import { ThemedText } from '@/components/themed-text';
-import { CardShadow, Spacing } from '@/constants/theme';
+import { Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { ApiError, apiRequest } from '@/lib/api';
 import { applyApiError } from '@/lib/form-errors';
@@ -197,33 +198,33 @@ export default function UpiPaymentScreen() {
         keyboardShouldPersistTaps="handled"
         bottomOffset={Spacing.four}
       >
-        <View style={[styles.card, { backgroundColor: theme.backgroundElement }]}>
+        <Card>
           <ThemedText type="small" themeColor="textSecondary">
             Amount
           </ThemedText>
           <ThemedText type="subtitle">{formatInr(booking.amountInPaise)}</ThemedText>
-        </View>
+        </Card>
 
         {qrImageUrl ? (
           <View style={[styles.qrWrap, { backgroundColor: theme.backgroundElement }]}>
             <Image source={{ uri: qrImageUrl }} style={styles.qr} contentFit="contain" />
           </View>
         ) : (
-          <View style={[styles.card, { backgroundColor: theme.backgroundElement }]}>
+          <Card>
             <ThemedText type="small" themeColor="textSecondary">
               QR code not available for this location. Use the UPI ID below, or ask
               staff at the parking location.
             </ThemedText>
-          </View>
+          </Card>
         )}
 
         {vpa ? (
-          <View style={[styles.card, { backgroundColor: theme.backgroundElement }]}>
+          <Card>
             <ThemedText type="small" themeColor="textSecondary">
               Pay to UPI ID
             </ThemedText>
             <ThemedText type="smallBold">{vpa}</ThemedText>
-          </View>
+          </Card>
         ) : null}
 
         {!havePaid ? (
@@ -243,7 +244,8 @@ export default function UpiPaymentScreen() {
                   { backgroundColor: theme.backgroundElement, borderColor: theme.danger },
                 ]}
               >
-                <ThemedText type="small" themeColor="danger">
+                <Ionicons name="alert-circle" size={18} color={theme.danger} />
+                <ThemedText type="small" themeColor="danger" style={styles.bannerText}>
                   {formError}
                 </ThemedText>
               </View>
@@ -311,14 +313,8 @@ const styles = StyleSheet.create({
     gap: Spacing.three,
   },
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  card: {
-    ...CardShadow,
-    borderRadius: 12,
-    padding: Spacing.three,
-    gap: Spacing.half,
-  },
   qrWrap: {
-    borderRadius: 12,
+    borderRadius: Radius.surface,
     padding: Spacing.three,
     alignItems: 'center',
   },
@@ -328,16 +324,20 @@ const styles = StyleSheet.create({
   },
   form: { gap: Spacing.three },
   banner: {
-    borderRadius: 10,
-    borderWidth: StyleSheet.hairlineWidth,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
+    borderRadius: Radius.control,
+    borderWidth: 1,
     padding: Spacing.three,
   },
+  bannerText: { flex: 1 },
   screenshotField: { gap: Spacing.one },
   screenshotPreviewWrap: { gap: Spacing.two },
   screenshotPreview: {
     width: 160,
     height: 160,
-    borderRadius: 12,
+    borderRadius: Radius.surface,
   },
   screenshotActions: {
     flexDirection: 'row',
@@ -347,7 +347,7 @@ const styles = StyleSheet.create({
   removeButton: {
     width: 36,
     height: 36,
-    borderRadius: 18,
+    borderRadius: Radius.pill,
     alignItems: 'center',
     justifyContent: 'center',
   },

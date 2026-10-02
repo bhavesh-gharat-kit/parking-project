@@ -6,6 +6,7 @@
  * form, same Zod schema (`VehicleRequestSchema`, shared with the backend), so
  * there is only one place the vehicle-number rules are written down.
  */
+import { Ionicons } from '@expo/vector-icons';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
@@ -23,9 +24,10 @@ import {
 } from '@parking/shared';
 
 import { AppButton } from '@/components/app-button';
+import { SectionHeader } from '@/components/section-header';
 import { TextField } from '@/components/text-field';
 import { ThemedText } from '@/components/themed-text';
-import { Spacing } from '@/constants/theme';
+import { Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { ApiError, apiRequest } from '@/lib/api';
 import { applyApiError } from '@/lib/form-errors';
@@ -102,11 +104,14 @@ export default function VehicleFormScreen() {
         >
           {formError ? (
             <View style={[styles.banner, { backgroundColor: theme.backgroundElement, borderColor: theme.danger }]}>
-              <ThemedText type="small" themeColor="danger">
+              <Ionicons name="alert-circle" size={18} color={theme.danger} />
+              <ThemedText type="small" themeColor="danger" style={styles.bannerText}>
                 {formError}
               </ThemedText>
             </View>
           ) : null}
+
+          <SectionHeader title="Vehicle identity" divided={false} />
 
           <TextField
             control={control}
@@ -118,33 +123,6 @@ export default function VehicleFormScreen() {
             returnKeyType="next"
           />
 
-          <View style={styles.field}>
-            <ThemedText type="smallBold">Vehicle type</ThemedText>
-            <Controller
-              control={control}
-              name="type"
-              render={({ field: { onChange, value } }) => (
-                <View style={styles.row}>
-                  {VEHICLE_TYPES.map((type) => (
-                    <Pressable
-                      key={type}
-                      onPress={() => onChange(type)}
-                      style={[
-                        styles.chip,
-                        {
-                          backgroundColor:
-                            value === type ? theme.backgroundSelected : theme.backgroundElement,
-                        },
-                      ]}
-                    >
-                      <ThemedText type="small">{VEHICLE_TYPE_LABELS[type]}</ThemedText>
-                    </Pressable>
-                  ))}
-                </View>
-              )}
-            />
-          </View>
-
           <TextField
             control={control}
             name="makeModel"
@@ -154,6 +132,39 @@ export default function VehicleFormScreen() {
             hint="Optional — helps tell two vehicles apart."
             returnKeyType="done"
             onSubmitEditing={handleSubmit(onSubmit)}
+          />
+
+          <SectionHeader title="Vehicle type" />
+
+          <Controller
+            control={control}
+            name="type"
+            render={({ field: { onChange, value } }) => (
+              <View style={styles.row}>
+                {VEHICLE_TYPES.map((type) => {
+                  const selected = value === type;
+                  return (
+                    <Pressable
+                      key={type}
+                      onPress={() => onChange(type)}
+                      accessibilityRole="radio"
+                      accessibilityState={{ selected }}
+                      style={[
+                        styles.chip,
+                        {
+                          backgroundColor: selected ? theme.backgroundSelected : theme.backgroundElement,
+                          borderColor: selected ? theme.primary : theme.border,
+                        },
+                      ]}
+                    >
+                      <ThemedText type="small" style={selected ? { color: theme.primary } : undefined}>
+                        {VEHICLE_TYPE_LABELS[type]}
+                      </ThemedText>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            )}
           />
 
           <AppButton
@@ -175,19 +186,24 @@ const styles = StyleSheet.create({
     padding: Spacing.four,
     gap: Spacing.three,
   },
-  field: { gap: Spacing.one },
   row: {
     flexDirection: 'row',
     gap: Spacing.two,
+    flexWrap: 'wrap',
   },
   chip: {
-    borderRadius: 999,
+    borderRadius: Radius.pill,
+    borderWidth: 1,
     paddingVertical: Spacing.two,
     paddingHorizontal: Spacing.three,
   },
   banner: {
-    borderRadius: 10,
-    borderWidth: StyleSheet.hairlineWidth,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
+    borderRadius: Radius.control,
+    borderWidth: 1,
     padding: Spacing.three,
   },
+  bannerText: { flex: 1 },
 });

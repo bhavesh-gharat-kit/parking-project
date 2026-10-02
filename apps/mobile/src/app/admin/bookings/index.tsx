@@ -8,6 +8,7 @@
  * admin to be able to tell apart. `search` matches booking number, vehicle
  * number, or customer name/email — the same three the spec names.
  */
+import { Ionicons } from '@expo/vector-icons';
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import {
@@ -29,9 +30,11 @@ import {
   type Paginated,
 } from '@parking/shared';
 
+import { Card } from '@/components/card';
+import { ScreenContainer } from '@/components/screen-container';
 import { StatusBadge } from '@/components/status-badge';
 import { ThemedText } from '@/components/themed-text';
-import { CardShadow, Spacing } from '@/constants/theme';
+import { Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { ApiError, apiRequest } from '@/lib/api';
 
@@ -50,6 +53,7 @@ export default function AdminBookingsScreen() {
   const [filter, setFilter] = useState<QueueFilter>('PAYMENT_VERIFICATION');
   const [searchInput, setSearchInput] = useState('');
   const [search, setSearch] = useState('');
+  const [searchFocused, setSearchFocused] = useState(false);
   const [bookings, setBookings] = useState<AdminBooking[] | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
@@ -84,17 +88,23 @@ export default function AdminBookingsScreen() {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.background }]}>
+    <ScreenContainer>
       <TextInput
         value={searchInput}
         onChangeText={setSearchInput}
         onSubmitEditing={() => setSearch(searchInput.trim())}
+        onFocus={() => setSearchFocused(true)}
+        onBlur={() => setSearchFocused(false)}
         placeholder="Search booking #, vehicle, customer"
         placeholderTextColor={theme.textSecondary}
         returnKeyType="search"
         style={[
           styles.search,
-          { color: theme.text, backgroundColor: theme.backgroundElement, borderColor: theme.border },
+          {
+            color: theme.text,
+            backgroundColor: searchFocused ? theme.background : theme.backgroundElement,
+            borderColor: searchFocused ? theme.primary : theme.borderStrong,
+          },
         ]}
       />
 
@@ -132,34 +142,36 @@ export default function AdminBookingsScreen() {
           }
           ListEmptyComponent={
             bookings === null ? null : (
-              <ThemedText themeColor="textSecondary">Nothing here right now.</ThemedText>
+              <View style={styles.empty}>
+                <Ionicons name="checkmark-done-circle-outline" size={32} color={theme.textSecondary} />
+                <ThemedText themeColor="textSecondary">Nothing here right now.</ThemedText>
+              </View>
             )
           }
           renderItem={({ item }) => (
-            <Pressable
-              onPress={() => router.push(`/admin/bookings/${item.id}`)}
-              style={[styles.card, { backgroundColor: theme.backgroundElement }]}
-            >
-              <View style={styles.cardHeader}>
-                <ThemedText type="smallBold">{item.bookingNumber}</ThemedText>
-                <ThemedText type="smallBold" themeColor="primary">
-                  {formatInr(item.amountInPaise)}
-                </ThemedText>
-              </View>
-              <ThemedText type="small" themeColor="textSecondary">
-                {item.customer.name ?? item.customer.email} · {item.vehicleNumber}
-              </ThemedText>
-              <ThemedText type="small" themeColor="textSecondary">
-                {formatIstDateTime(item.startTime)}
-              </ThemedText>
-              <View style={styles.statusRow}>
-                <StatusBadge status={item.status} />
-                {item.paymentMethod ? (
-                  <ThemedText type="small" themeColor="textSecondary">
-                    {PAYMENT_METHOD_LABELS[item.paymentMethod]}
+            <Pressable onPress={() => router.push(`/admin/bookings/${item.id}`)}>
+              <Card>
+                <View style={styles.cardHeader}>
+                  <ThemedText type="smallBold">{item.bookingNumber}</ThemedText>
+                  <ThemedText type="smallBold" themeColor="primary">
+                    {formatInr(item.amountInPaise)}
                   </ThemedText>
-                ) : null}
-              </View>
+                </View>
+                <ThemedText type="small" themeColor="textSecondary">
+                  {item.customer.name ?? item.customer.email} · {item.vehicleNumber}
+                </ThemedText>
+                <ThemedText type="small" themeColor="textSecondary">
+                  {formatIstDateTime(item.startTime)}
+                </ThemedText>
+                <View style={styles.statusRow}>
+                  <StatusBadge status={item.status} />
+                  {item.paymentMethod ? (
+                    <ThemedText type="small" themeColor="textSecondary">
+                      {PAYMENT_METHOD_LABELS[item.paymentMethod]}
+                    </ThemedText>
+                  ) : null}
+                </View>
+              </Card>
             </Pressable>
           )}
         />
@@ -167,42 +179,34 @@ export default function AdminBookingsScreen() {
 
       {loadError ? (
         <View style={[styles.banner, { backgroundColor: theme.backgroundElement, borderColor: theme.danger }]}>
-          <ThemedText type="small" themeColor="danger">
+          <Ionicons name="alert-circle" size={18} color={theme.danger} />
+          <ThemedText type="small" themeColor="danger" style={styles.bannerText}>
             {loadError}
           </ThemedText>
         </View>
       ) : null}
-    </View>
+    </ScreenContainer>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: Spacing.four,
-    gap: Spacing.three,
-  },
   search: {
-    borderRadius: 10,
-    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: Radius.control,
+    borderWidth: 1.5,
     paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.two,
+    paddingVertical: Spacing.three,
     fontSize: 16,
+    minHeight: 48,
   },
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.two },
   chip: {
-    borderRadius: 999,
+    borderRadius: Radius.pill,
     paddingHorizontal: Spacing.three,
     paddingVertical: Spacing.one,
   },
   loading: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   list: { gap: Spacing.two },
-  card: {
-    ...CardShadow,
-    borderRadius: 12,
-    padding: Spacing.three,
-    gap: Spacing.half,
-  },
+  empty: { alignItems: 'center', gap: Spacing.two, paddingVertical: Spacing.five },
   cardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -214,8 +218,12 @@ const styles = StyleSheet.create({
     gap: Spacing.two,
   },
   banner: {
-    borderRadius: 10,
-    borderWidth: StyleSheet.hairlineWidth,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
+    borderRadius: Radius.control,
+    borderWidth: 1,
     padding: Spacing.three,
   },
+  bannerText: { flex: 1 },
 });

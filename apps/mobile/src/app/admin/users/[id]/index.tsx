@@ -5,6 +5,7 @@
  * same endpoint the booking queue uses — rather than embedding it in the user
  * response, so this screen and the queue can never show it two different ways.
  */
+import { Ionicons } from '@expo/vector-icons';
 import { router, Stack, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, Alert, FlatList, Pressable, RefreshControl, StyleSheet, View } from 'react-native';
@@ -18,10 +19,11 @@ import {
 } from '@parking/shared';
 
 import { AppButton } from '@/components/app-button';
+import { Card } from '@/components/card';
 import { ScreenContainer } from '@/components/screen-container';
-import { StatusBadge } from '@/components/status-badge';
+import { StatusBadge, TonePill } from '@/components/status-badge';
 import { ThemedText } from '@/components/themed-text';
-import { CardShadow, Spacing } from '@/constants/theme';
+import { Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { ApiError, apiRequest } from '@/lib/api';
 
@@ -130,12 +132,14 @@ export default function AdminUserDetailScreen() {
           }
           ListHeaderComponent={
             <View style={styles.header}>
-              <View style={[styles.card, { backgroundColor: theme.backgroundElement }]}>
+              <Card>
                 <View style={styles.cardHeader}>
                   <ThemedText type="smallBold">{user.name ?? '(no name on file)'}</ThemedText>
-                  <ThemedText type="small" themeColor={user.isActive ? 'primary' : 'danger'}>
-                    {user.isActive ? 'Active' : 'Disabled'}
-                  </ThemedText>
+                  <TonePill
+                    label={user.isActive ? 'Active' : 'Disabled'}
+                    tone={user.isActive ? 'done' : 'bad'}
+                    icon={user.isActive ? 'checkmark-circle' : 'ban-outline'}
+                  />
                 </View>
                 <ThemedText type="small" themeColor="textSecondary">
                   {user.email}
@@ -151,7 +155,7 @@ export default function AdminUserDetailScreen() {
                 <ThemedText type="small" themeColor="textSecondary">
                   Joined {formatIstDateTime(user.createdAt)}
                 </ThemedText>
-              </View>
+              </Card>
 
               <AppButton
                 label={user.isActive ? 'Disable user' : 'Enable user'}
@@ -165,34 +169,37 @@ export default function AdminUserDetailScreen() {
           }
           ListEmptyComponent={
             bookings === null ? null : (
-              <ThemedText themeColor="textSecondary">No bookings yet.</ThemedText>
+              <View style={styles.empty}>
+                <Ionicons name="receipt-outline" size={32} color={theme.textSecondary} />
+                <ThemedText themeColor="textSecondary">No bookings yet.</ThemedText>
+              </View>
             )
           }
           renderItem={({ item }) => (
-            <Pressable
-              onPress={() => router.push(`/admin/bookings/${item.id}`)}
-              style={[styles.card, { backgroundColor: theme.backgroundElement }]}
-            >
-              <View style={styles.cardHeader}>
-                <ThemedText type="smallBold">{item.bookingNumber}</ThemedText>
-                <ThemedText type="smallBold" themeColor="primary">
-                  {formatInr(item.amountInPaise)}
+            <Pressable onPress={() => router.push(`/admin/bookings/${item.id}`)}>
+              <Card>
+                <View style={styles.cardHeader}>
+                  <ThemedText type="smallBold">{item.bookingNumber}</ThemedText>
+                  <ThemedText type="smallBold" themeColor="primary">
+                    {formatInr(item.amountInPaise)}
+                  </ThemedText>
+                </View>
+                <ThemedText type="small" themeColor="textSecondary">
+                  {item.vehicleNumber} · {item.rateLabel}
                 </ThemedText>
-              </View>
-              <ThemedText type="small" themeColor="textSecondary">
-                {item.vehicleNumber} · {item.rateLabel}
-              </ThemedText>
-              <ThemedText type="small" themeColor="textSecondary">
-                {formatIstDateTime(item.startTime)}
-              </ThemedText>
-              <StatusBadge status={item.status} />
+                <ThemedText type="small" themeColor="textSecondary">
+                  {formatIstDateTime(item.startTime)}
+                </ThemedText>
+                <StatusBadge status={item.status} />
+              </Card>
             </Pressable>
           )}
         />
 
         {loadError ? (
           <View style={[styles.banner, { backgroundColor: theme.backgroundElement, borderColor: theme.danger }]}>
-            <ThemedText type="small" themeColor="danger">
+            <Ionicons name="alert-circle" size={18} color={theme.danger} />
+            <ThemedText type="small" themeColor="danger" style={styles.bannerText}>
               {loadError}
             </ThemedText>
           </View>
@@ -206,20 +213,19 @@ const styles = StyleSheet.create({
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: Spacing.three },
   header: { gap: Spacing.three, marginBottom: Spacing.three },
   list: { gap: Spacing.two },
-  card: {
-    ...CardShadow,
-    borderRadius: 12,
-    padding: Spacing.three,
-    gap: Spacing.half,
-  },
+  empty: { alignItems: 'center', gap: Spacing.two, paddingVertical: Spacing.five },
   cardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
   banner: {
-    borderRadius: 10,
-    borderWidth: StyleSheet.hairlineWidth,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
+    borderRadius: Radius.control,
+    borderWidth: 1,
     padding: Spacing.three,
   },
+  bannerText: { flex: 1 },
 });

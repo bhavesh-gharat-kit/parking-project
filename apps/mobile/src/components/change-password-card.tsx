@@ -17,6 +17,7 @@
  * Named `...Card` rather than `...Form` because `ChangePasswordForm` is already the
  * shared *type* this file validates against, and one name for both reads as a bug.
  */
+import { Ionicons } from '@expo/vector-icons';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
@@ -31,9 +32,10 @@ import {
 } from '@parking/shared';
 
 import { AppButton } from '@/components/app-button';
+import { Card } from '@/components/card';
 import { TextField } from '@/components/text-field';
 import { ThemedText } from '@/components/themed-text';
-import { CardShadow, Spacing } from '@/constants/theme';
+import { Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { apiRequest } from '@/lib/api';
 import { applyApiError } from '@/lib/form-errors';
@@ -88,20 +90,22 @@ export function ChangePasswordCard() {
   };
 
   return (
-    <View style={[styles.card, { backgroundColor: theme.backgroundElement }]}>
+    <Card>
       <ThemedText type="smallBold">Change password</ThemedText>
 
       {formError ? (
-        <View style={[styles.banner, { borderColor: theme.danger }]}>
-          <ThemedText type="small" themeColor="danger">
+        <View style={[styles.banner, { backgroundColor: theme.backgroundElement, borderColor: theme.danger }]}>
+          <Ionicons name="alert-circle" size={18} color={theme.danger} />
+          <ThemedText type="small" themeColor="danger" style={styles.bannerText}>
             {formError}
           </ThemedText>
         </View>
       ) : null}
 
       {changed ? (
-        <View style={[styles.banner, { borderColor: theme.primary }]}>
-          <ThemedText type="small" themeColor="primary">
+        <View style={[styles.banner, { backgroundColor: theme.backgroundElement, borderColor: theme.primary }]}>
+          <Ionicons name="checkmark-circle" size={18} color={theme.primary} />
+          <ThemedText type="small" themeColor="primary" style={styles.bannerText}>
             Password changed. Use the new one next time you sign in.
           </ThemedText>
         </View>
@@ -153,20 +157,18 @@ export function ChangePasswordCard() {
         You stay signed in on this device. Sessions already open on other devices
         are not signed out.
       </ThemedText>
-    </View>
+    </Card>
   );
 }
 
 const styles = StyleSheet.create({
-  card: {
-    ...CardShadow,
-    borderRadius: 12,
-    padding: Spacing.three,
-    gap: Spacing.three,
-  },
   banner: {
-    borderRadius: 10,
-    borderWidth: StyleSheet.hairlineWidth,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
+    borderRadius: Radius.control,
+    borderWidth: 1,
     padding: Spacing.three,
   },
+  bannerText: { flex: 1 },
 });

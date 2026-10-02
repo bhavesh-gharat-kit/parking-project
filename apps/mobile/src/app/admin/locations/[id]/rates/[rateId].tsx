@@ -7,19 +7,13 @@
  * `durationMinutes` with the same `formatDuration` shown live below the
  * duration input, so the preview always matches what the customer will see.
  */
+import { Ionicons } from '@expo/vector-icons';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Controller, useForm, useWatch } from 'react-hook-form';
-import {
-  ActivityIndicator,
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  View,
-} from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 
 import {
   formatDuration,
@@ -33,9 +27,10 @@ import {
 } from '@parking/shared';
 
 import { AppButton } from '@/components/app-button';
+import { SectionHeader } from '@/components/section-header';
 import { TextField } from '@/components/text-field';
 import { ThemedText } from '@/components/themed-text';
-import { Spacing } from '@/constants/theme';
+import { Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { ApiError, apiRequest } from '@/lib/api';
 import { applyApiError } from '@/lib/form-errors';
@@ -132,104 +127,122 @@ export default function AdminRateFormScreen() {
           <ActivityIndicator color={theme.text} />
         </View>
       ) : (
-        <KeyboardAvoidingView
+        <KeyboardAwareScrollView
           style={[styles.flex, { backgroundColor: theme.background }]}
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          contentContainerStyle={styles.content}
+          keyboardShouldPersistTaps="handled"
+          bottomOffset={Spacing.four}
         >
-          <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-            {formError ? (
-              <View style={[styles.banner, { backgroundColor: theme.backgroundElement, borderColor: theme.danger }]}>
-                <ThemedText type="small" themeColor="danger">
-                  {formError}
-                </ThemedText>
-              </View>
-            ) : null}
+          {formError ? (
+            <View style={[styles.banner, { backgroundColor: theme.backgroundElement, borderColor: theme.danger }]}>
+              <Ionicons name="alert-circle" size={18} color={theme.danger} />
+              <ThemedText type="small" themeColor="danger" style={styles.bannerText}>
+                {formError}
+              </ThemedText>
+            </View>
+          ) : null}
 
-            <View style={styles.field}>
-              <ThemedText type="smallBold">Vehicle type</ThemedText>
-              <Controller
-                control={control}
-                name="vehicleType"
-                render={({ field: { onChange, value } }) => (
-                  <View style={styles.row}>
-                    {VEHICLE_TYPES.map((type) => (
+          <SectionHeader title="Rate" divided={false} />
+
+          <View style={styles.field}>
+            <ThemedText type="smallBold">Vehicle type</ThemedText>
+            <Controller
+              control={control}
+              name="vehicleType"
+              render={({ field: { onChange, value } }) => (
+                <View style={styles.row}>
+                  {VEHICLE_TYPES.map((type) => {
+                    const selected = value === type;
+                    return (
                       <Pressable
                         key={type}
                         onPress={() => onChange(type)}
+                        accessibilityRole="radio"
+                        accessibilityState={{ selected }}
                         style={[
                           styles.chip,
                           {
-                            backgroundColor:
-                              value === type ? theme.backgroundSelected : theme.backgroundElement,
+                            backgroundColor: selected ? theme.backgroundSelected : theme.backgroundElement,
+                            borderColor: selected ? theme.primary : theme.border,
                           },
                         ]}
                       >
-                        <ThemedText type="small">{VEHICLE_TYPE_LABELS[type]}</ThemedText>
+                        <ThemedText type="small" style={selected ? { color: theme.primary } : undefined}>
+                          {VEHICLE_TYPE_LABELS[type]}
+                        </ThemedText>
                       </Pressable>
-                    ))}
-                  </View>
-                )}
-              />
-            </View>
-
-            <TextField
-              control={control}
-              name="durationMinutes"
-              label="Duration (minutes)"
-              placeholder="60"
-              keyboardType="number-pad"
-              hint={durationPreview ? `Shown to customers as "${durationPreview}"` : 'e.g. 60, 120, 1440 (full day)'}
-              returnKeyType="next"
+                    );
+                  })}
+                </View>
+              )}
             />
+          </View>
 
-            <TextField
+          <TextField
+            control={control}
+            name="durationMinutes"
+            label="Duration (minutes)"
+            placeholder="60"
+            keyboardType="number-pad"
+            hint={durationPreview ? `Shown to customers as "${durationPreview}"` : 'e.g. 60, 120, 1440 (full day)'}
+            returnKeyType="next"
+          />
+
+          <TextField
+            control={control}
+            name="priceInRupees"
+            label="Price (₹)"
+            placeholder="70"
+            keyboardType="decimal-pad"
+            returnKeyType="done"
+            onSubmitEditing={handleSubmit(onSubmit)}
+          />
+
+          <SectionHeader title="Status" />
+
+          <View style={styles.field}>
+            <Controller
               control={control}
-              name="priceInRupees"
-              label="Price (₹)"
-              placeholder="70"
-              keyboardType="decimal-pad"
-              returnKeyType="done"
-              onSubmitEditing={handleSubmit(onSubmit)}
-            />
-
-            <View style={styles.field}>
-              <ThemedText type="smallBold">Status</ThemedText>
-              <Controller
-                control={control}
-                name="isActive"
-                render={({ field: { onChange, value } }) => (
-                  <View style={styles.row}>
-                    {[
-                      { label: 'Active', active: true },
-                      { label: 'Retired', active: false },
-                    ].map((option) => (
+              name="isActive"
+              render={({ field: { onChange, value } }) => (
+                <View style={styles.row}>
+                  {[
+                    { label: 'Active', active: true },
+                    { label: 'Retired', active: false },
+                  ].map((option) => {
+                    const selected = value === option.active;
+                    return (
                       <Pressable
                         key={option.label}
                         onPress={() => onChange(option.active)}
+                        accessibilityRole="radio"
+                        accessibilityState={{ selected }}
                         style={[
                           styles.chip,
                           {
-                            backgroundColor:
-                              value === option.active ? theme.backgroundSelected : theme.backgroundElement,
+                            backgroundColor: selected ? theme.backgroundSelected : theme.backgroundElement,
+                            borderColor: selected ? theme.primary : theme.border,
                           },
                         ]}
                       >
-                        <ThemedText type="small">{option.label}</ThemedText>
+                        <ThemedText type="small" style={selected ? { color: theme.primary } : undefined}>
+                          {option.label}
+                        </ThemedText>
                       </Pressable>
-                    ))}
-                  </View>
-                )}
-              />
-            </View>
-
-            <AppButton
-              label={isNew ? 'Add rate' : 'Save changes'}
-              onPress={handleSubmit(onSubmit)}
-              loading={isSubmitting}
-              disabled={isSubmitting}
+                    );
+                  })}
+                </View>
+              )}
             />
-          </ScrollView>
-        </KeyboardAvoidingView>
+          </View>
+
+          <AppButton
+            label={isNew ? 'Add rate' : 'Save changes'}
+            onPress={handleSubmit(onSubmit)}
+            loading={isSubmitting}
+            disabled={isSubmitting}
+          />
+        </KeyboardAwareScrollView>
       )}
     </>
   );
@@ -248,13 +261,18 @@ const styles = StyleSheet.create({
     gap: Spacing.two,
   },
   chip: {
-    borderRadius: 999,
+    borderRadius: Radius.pill,
+    borderWidth: 1,
     paddingVertical: Spacing.two,
     paddingHorizontal: Spacing.three,
   },
   banner: {
-    borderRadius: 10,
-    borderWidth: StyleSheet.hairlineWidth,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
+    borderRadius: Radius.control,
+    borderWidth: 1,
     padding: Spacing.three,
   },
+  bannerText: { flex: 1 },
 });

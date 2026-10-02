@@ -24,7 +24,7 @@ import { useTheme } from '@/hooks/use-theme';
  * moved off `primary` onto the real `success` green, which frees brand blue to
  * mean "the thing to press" rather than "finished".
  */
-type Tone = 'done' | 'waiting' | 'bad';
+export type Tone = 'done' | 'waiting' | 'bad';
 
 const STATUS_TONE: Record<BookingStatus, Tone> = {
   PENDING: 'waiting',
@@ -57,8 +57,25 @@ type StatusBadgeProps = {
 };
 
 export function StatusBadge({ status, size = 'default' }: StatusBadgeProps) {
+  return <TonePill label={BOOKING_STATUS_LABELS[status]} tone={STATUS_TONE[status]} icon={STATUS_ICON[status]} size={size} />;
+}
+
+type TonePillProps = {
+  label: string;
+  tone: Tone;
+  icon: keyof typeof Ionicons.glyphMap;
+  /** `large` is for header-style summaries; `default` fits a list row. */
+  size?: 'default' | 'large';
+};
+
+/**
+ * The pill `StatusBadge` draws, generalised for the other enabled/disabled
+ * style statuses in the app (`isActive` on a location, a rate, a user) that
+ * are not a `BookingStatus` but deserve the same "pill, not coloured text"
+ * treatment (`01-ui-ux-findings.md`'s "no visual language for professional").
+ */
+export function TonePill({ label, tone, icon, size = 'default' }: TonePillProps) {
   const theme = useTheme();
-  const tone = STATUS_TONE[status];
 
   // The fill is the foreground at 15% (the `26` alpha suffix) rather than a
   // second token per tone: one colour per status is one thing to keep legible
@@ -70,9 +87,9 @@ export function StatusBadge({ status, size = 'default' }: StatusBadgeProps) {
 
   return (
     <View style={[styles.badge, size === 'large' && styles.badgeLarge, { backgroundColor: background }]}>
-      <Ionicons name={STATUS_ICON[status]} size={iconSize} color={foreground} />
+      <Ionicons name={icon} size={iconSize} color={foreground} />
       <ThemedText type={size === 'large' ? 'smallBold' : 'small'} style={{ color: foreground }}>
-        {BOOKING_STATUS_LABELS[status]}
+        {label}
       </ThemedText>
     </View>
   );

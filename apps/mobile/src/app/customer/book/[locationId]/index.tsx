@@ -13,6 +13,7 @@
  * a refreshed list — `useFocusEffect`, not a mount-only fetch, because Expo
  * Router keeps this screen mounted underneath the one it pushed.
  */
+import { Ionicons } from '@expo/vector-icons';
 import { router, Stack, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, StyleSheet, View } from 'react-native';
@@ -20,9 +21,10 @@ import { ActivityIndicator, FlatList, Pressable, StyleSheet, View } from 'react-
 import { VEHICLE_TYPE_LABELS, type Vehicle } from '@parking/shared';
 
 import { AppButton } from '@/components/app-button';
+import { Card } from '@/components/card';
 import { ScreenContainer } from '@/components/screen-container';
 import { ThemedText } from '@/components/themed-text';
-import { CardShadow, Spacing } from '@/constants/theme';
+import { Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { ApiError, apiRequest } from '@/lib/api';
 import { useBookingDraftStore } from '@/stores/booking-draft-store';
@@ -77,27 +79,25 @@ export default function BookVehicleScreen() {
             contentContainerStyle={styles.list}
             ListEmptyComponent={
               isEmpty ? (
-                <ThemedText themeColor="textSecondary">
-                  You have no vehicles yet. Add one to book parking for it.
-                </ThemedText>
+                <View style={styles.empty}>
+                  <Ionicons name="car-outline" size={32} color={theme.textSecondary} />
+                  <ThemedText themeColor="textSecondary">
+                    You have no vehicles yet. Add one to book parking for it.
+                  </ThemedText>
+                </View>
               ) : null
             }
             renderItem={({ item }) => (
-              <Pressable
-                onPress={() => selectVehicle(item)}
-                style={[
-                  styles.card,
-                  {
-                    backgroundColor:
-                      vehicleId === item.id ? theme.backgroundSelected : theme.backgroundElement,
-                  },
-                ]}
-              >
-                <ThemedText type="smallBold">{item.number}</ThemedText>
-                <ThemedText type="small" themeColor="textSecondary">
-                  {VEHICLE_TYPE_LABELS[item.type]}
-                  {item.makeModel ? ` · ${item.makeModel}` : ''}
-                </ThemedText>
+              <Pressable onPress={() => selectVehicle(item)}>
+                <Card
+                  style={vehicleId === item.id && { backgroundColor: theme.backgroundSelected }}
+                >
+                  <ThemedText type="smallBold">{item.number}</ThemedText>
+                  <ThemedText type="small" themeColor="textSecondary">
+                    {VEHICLE_TYPE_LABELS[item.type]}
+                    {item.makeModel ? ` · ${item.makeModel}` : ''}
+                  </ThemedText>
+                </Card>
               </Pressable>
             )}
           />
@@ -110,7 +110,8 @@ export default function BookVehicleScreen() {
               { backgroundColor: theme.backgroundElement, borderColor: theme.danger },
             ]}
           >
-            <ThemedText type="small" themeColor="danger">
+            <Ionicons name="alert-circle" size={18} color={theme.danger} />
+            <ThemedText type="small" themeColor="danger" style={styles.bannerText}>
               {loadError}
             </ThemedText>
           </View>
@@ -129,15 +130,14 @@ export default function BookVehicleScreen() {
 const styles = StyleSheet.create({
   loading: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   list: { gap: Spacing.two },
-  card: {
-    ...CardShadow,
-    borderRadius: 12,
-    padding: Spacing.three,
-    gap: Spacing.half,
-  },
+  empty: { alignItems: 'center', gap: Spacing.two, paddingVertical: Spacing.five },
   banner: {
-    borderRadius: 10,
-    borderWidth: StyleSheet.hairlineWidth,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
+    borderRadius: Radius.control,
+    borderWidth: 1,
     padding: Spacing.three,
   },
+  bannerText: { flex: 1 },
 });

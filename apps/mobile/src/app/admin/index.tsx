@@ -15,21 +15,23 @@ import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, View } from 
 import { formatInr, type AdminDashboardSummary } from '@parking/shared';
 
 import { AppButton } from '@/components/app-button';
+import { BrandHeader } from '@/components/brand-header';
+import { Card } from '@/components/card';
+import { Divider } from '@/components/divider';
 import { ThemedText } from '@/components/themed-text';
-import { CardShadow, Spacing } from '@/constants/theme';
+import { Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { ApiError, apiRequest } from '@/lib/api';
 import { useAuthStore } from '@/stores/auth-store';
 
 function StatTile({ label, value }: { label: string; value: string }) {
-  const theme = useTheme();
   return (
-    <View style={[styles.tile, { backgroundColor: theme.backgroundElement }]}>
+    <Card style={styles.tile}>
       <ThemedText type="subtitle">{value}</ThemedText>
       <ThemedText type="small" themeColor="textSecondary">
         {label}
       </ThemedText>
-    </View>
+    </Card>
   );
 }
 
@@ -72,12 +74,15 @@ export default function AdminHomeScreen() {
         <RefreshControl refreshing={refreshing} onRefresh={() => void refresh()} tintColor={theme.text} />
       }
     >
-      <View style={[styles.card, { backgroundColor: theme.backgroundElement }]}>
+      <BrandHeader variant="compact" />
+      <Divider />
+
+      <Card>
         <ThemedText type="smallBold">Welcome back{user?.name ? `, ${user.name}` : ''}</ThemedText>
         <ThemedText type="small" themeColor="textSecondary">
           {user?.email}
         </ThemedText>
-      </View>
+      </Card>
 
       {summary === null && !loadError ? (
         <View style={styles.loading}>
@@ -95,21 +100,22 @@ export default function AdminHomeScreen() {
               <StatTile label="UPI verification" value={String(location.pendingUpiVerificationCount)} />
               <StatTile label="Cash approval" value={String(location.pendingCashApprovalCount)} />
             </View>
-            <View style={[styles.revenueCard, { backgroundColor: theme.backgroundElement }]}>
+            <Card>
               <ThemedText type="small" themeColor="textSecondary">
                 Today&apos;s revenue
               </ThemedText>
               <ThemedText type="subtitle" themeColor="primary">
                 {formatInr(location.todayRevenueInPaise)}
               </ThemedText>
-            </View>
+            </Card>
           </View>
         ))
       )}
 
       {loadError ? (
         <View style={[styles.banner, { backgroundColor: theme.backgroundElement, borderColor: theme.danger }]}>
-          <ThemedText type="small" themeColor="danger">
+          <Ionicons name="alert-circle" size={18} color={theme.danger} />
+          <ThemedText type="small" themeColor="danger" style={styles.bannerText}>
             {loadError}
           </ThemedText>
         </View>
@@ -153,12 +159,6 @@ const styles = StyleSheet.create({
     padding: Spacing.four,
     gap: Spacing.three,
   },
-  card: {
-    ...CardShadow,
-    borderRadius: 12,
-    padding: Spacing.three,
-    gap: Spacing.one,
-  },
   loading: { paddingVertical: Spacing.five, alignItems: 'center' },
   section: { gap: Spacing.two },
   grid: {
@@ -168,21 +168,15 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   tile: {
-    ...CardShadow,
     flexBasis: '47%',
-    borderRadius: 12,
-    padding: Spacing.three,
-    gap: Spacing.half,
-  },
-  revenueCard: {
-    ...CardShadow,
-    borderRadius: 12,
-    padding: Spacing.three,
-    gap: Spacing.half,
   },
   banner: {
-    borderRadius: 10,
-    borderWidth: StyleSheet.hairlineWidth,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
+    borderRadius: Radius.control,
+    borderWidth: 1,
     padding: Spacing.three,
   },
+  bannerText: { flex: 1 },
 });

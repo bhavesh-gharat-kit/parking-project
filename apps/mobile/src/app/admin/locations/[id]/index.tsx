@@ -7,19 +7,13 @@
  * the backend validates against, so the form and the route handler can never
  * disagree about what a valid location looks like.
  */
+import { Ionicons } from '@expo/vector-icons';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
-import {
-  ActivityIndicator,
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  View,
-} from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 
 import {
   ParkingLocationRequestSchema,
@@ -29,9 +23,10 @@ import {
 } from '@parking/shared';
 
 import { AppButton } from '@/components/app-button';
+import { SectionHeader } from '@/components/section-header';
 import { TextField } from '@/components/text-field';
 import { ThemedText } from '@/components/themed-text';
-import { Spacing } from '@/constants/theme';
+import { Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { ApiError, apiRequest } from '@/lib/api';
 import { applyApiError } from '@/lib/form-errors';
@@ -130,20 +125,24 @@ export default function AdminLocationFormScreen() {
           <ActivityIndicator color={theme.text} />
         </View>
       ) : (
-        <KeyboardAvoidingView
+        <KeyboardAwareScrollView
           style={[styles.flex, { backgroundColor: theme.background }]}
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          contentContainerStyle={styles.content}
+          keyboardShouldPersistTaps="handled"
+          bottomOffset={Spacing.four}
         >
-          <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-            {formError ? (
-              <View style={[styles.banner, { backgroundColor: theme.backgroundElement, borderColor: theme.danger }]}>
-                <ThemedText type="small" themeColor="danger">
-                  {formError}
-                </ThemedText>
-              </View>
-            ) : null}
+          {formError ? (
+            <View style={[styles.banner, { backgroundColor: theme.backgroundElement, borderColor: theme.danger }]}>
+              <Ionicons name="alert-circle" size={18} color={theme.danger} />
+              <ThemedText type="small" themeColor="danger" style={styles.bannerText}>
+                {formError}
+              </ThemedText>
+            </View>
+          ) : null}
 
-            <TextField
+          <SectionHeader title="Location details" divided={false} />
+
+          <TextField
               control={control}
               name="name"
               label="Location name"
@@ -220,6 +219,8 @@ export default function AdminLocationFormScreen() {
               returnKeyType="next"
             />
 
+            <SectionHeader title="UPI payment" />
+
             <TextField
               control={control}
               name="upiVpa"
@@ -245,8 +246,9 @@ export default function AdminLocationFormScreen() {
               onSubmitEditing={handleSubmit(onSubmit)}
             />
 
+            <SectionHeader title="Status" />
+
             <View style={styles.field}>
-              <ThemedText type="smallBold">Status</ThemedText>
               <Controller
                 control={control}
                 name="isActive"
@@ -255,21 +257,28 @@ export default function AdminLocationFormScreen() {
                     {[
                       { label: 'Active', active: true },
                       { label: 'Inactive', active: false },
-                    ].map((option) => (
-                      <Pressable
-                        key={option.label}
-                        onPress={() => onChange(option.active)}
-                        style={[
-                          styles.chip,
-                          {
-                            backgroundColor:
-                              value === option.active ? theme.backgroundSelected : theme.backgroundElement,
-                          },
-                        ]}
-                      >
-                        <ThemedText type="small">{option.label}</ThemedText>
-                      </Pressable>
-                    ))}
+                    ].map((option) => {
+                      const selected = value === option.active;
+                      return (
+                        <Pressable
+                          key={option.label}
+                          onPress={() => onChange(option.active)}
+                          accessibilityRole="radio"
+                          accessibilityState={{ selected }}
+                          style={[
+                            styles.chip,
+                            {
+                              backgroundColor: selected ? theme.backgroundSelected : theme.backgroundElement,
+                              borderColor: selected ? theme.primary : theme.border,
+                            },
+                          ]}
+                        >
+                          <ThemedText type="small" style={selected ? { color: theme.primary } : undefined}>
+                            {option.label}
+                          </ThemedText>
+                        </Pressable>
+                      );
+                    })}
                   </View>
                 )}
               />
@@ -284,8 +293,7 @@ export default function AdminLocationFormScreen() {
               loading={isSubmitting}
               disabled={isSubmitting}
             />
-          </ScrollView>
-        </KeyboardAvoidingView>
+        </KeyboardAwareScrollView>
       )}
     </>
   );
@@ -304,13 +312,18 @@ const styles = StyleSheet.create({
     gap: Spacing.two,
   },
   chip: {
-    borderRadius: 999,
+    borderRadius: Radius.pill,
+    borderWidth: 1,
     paddingVertical: Spacing.two,
     paddingHorizontal: Spacing.three,
   },
   banner: {
-    borderRadius: 10,
-    borderWidth: StyleSheet.hairlineWidth,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
+    borderRadius: Radius.control,
+    borderWidth: 1,
     padding: Spacing.three,
   },
+  bannerText: { flex: 1 },
 });

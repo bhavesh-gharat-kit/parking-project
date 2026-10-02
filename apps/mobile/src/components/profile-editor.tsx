@@ -31,6 +31,7 @@
  * two submit buttons, which on the Android 9 test device is well past where the
  * keyboard would otherwise cover the last field.
  */
+import { Ionicons } from '@expo/vector-icons';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useRef, useState } from 'react';
@@ -46,10 +47,12 @@ import {
 } from '@parking/shared';
 
 import { AppButton } from '@/components/app-button';
+import { Card } from '@/components/card';
 import { ChangePasswordCard } from '@/components/change-password-card';
+import { SectionHeader } from '@/components/section-header';
 import { TextField } from '@/components/text-field';
 import { ThemedText } from '@/components/themed-text';
-import { CardShadow, Spacing } from '@/constants/theme';
+import { Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { ApiError, apiRequest } from '@/lib/api';
 import { applyApiError } from '@/lib/form-errors';
@@ -139,9 +142,12 @@ export function ProfileEditor({ children }: ProfileEditorProps) {
       keyboardShouldPersistTaps="handled"
       bottomOffset={Spacing.four}
     >
+      <SectionHeader title="Personal info" divided={false} />
+
       {formError ? (
         <View style={[styles.banner, { backgroundColor: theme.backgroundElement, borderColor: theme.danger }]}>
-          <ThemedText type="small" themeColor="danger">
+          <Ionicons name="alert-circle" size={18} color={theme.danger} />
+          <ThemedText type="small" themeColor="danger" style={styles.bannerText}>
             {formError}
           </ThemedText>
         </View>
@@ -149,7 +155,8 @@ export function ProfileEditor({ children }: ProfileEditorProps) {
 
       {saved ? (
         <View style={[styles.banner, { backgroundColor: theme.backgroundElement, borderColor: theme.primary }]}>
-          <ThemedText type="small" themeColor="primary">
+          <Ionicons name="checkmark-circle" size={18} color={theme.primary} />
+          <ThemedText type="small" themeColor="primary" style={styles.bannerText}>
             Saved.
           </ThemedText>
         </View>
@@ -191,9 +198,16 @@ export function ProfileEditor({ children }: ProfileEditorProps) {
         disabled={isSubmitting}
       />
 
+      <SectionHeader title="Security" description="Change your password or review how you sign in." />
+
       <PasswordSection hasPassword={hasPassword} loadError={loadError} onRetry={() => void load()} />
 
-      {children}
+      {children ? (
+        <>
+          <SectionHeader title="More" />
+          {children}
+        </>
+      ) : null}
     </KeyboardAwareScrollView>
   );
 }
@@ -220,13 +234,13 @@ function PasswordSection({
 
   if (loadError !== null && hasPassword === null) {
     return (
-      <View style={[styles.card, { backgroundColor: theme.backgroundElement }]}>
+      <Card>
         <ThemedText type="smallBold">Change password</ThemedText>
         <ThemedText type="small" themeColor="textSecondary">
           {loadError}
         </ThemedText>
         <AppButton label="Try again" variant="secondary" onPress={onRetry} />
-      </View>
+      </Card>
     );
   }
 
@@ -240,13 +254,13 @@ function PasswordSection({
 
   if (!hasPassword) {
     return (
-      <View style={[styles.card, { backgroundColor: theme.backgroundElement }]}>
+      <Card>
         <ThemedText type="smallBold">You signed in with Google</ThemedText>
         <ThemedText type="small" themeColor="textSecondary">
           Your account has no password — keep using the “Sign in with Google”
           button, and there is nothing here to change.
         </ThemedText>
-      </View>
+      </Card>
     );
   }
 
@@ -261,15 +275,13 @@ const styles = StyleSheet.create({
   },
   field: { gap: Spacing.one },
   banner: {
-    borderRadius: 10,
-    borderWidth: StyleSheet.hairlineWidth,
-    padding: Spacing.three,
-  },
-  card: {
-    ...CardShadow,
-    borderRadius: 12,
-    padding: Spacing.three,
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: Spacing.two,
+    borderRadius: Radius.control,
+    borderWidth: 1,
+    padding: Spacing.three,
   },
+  bannerText: { flex: 1 },
   loading: { paddingVertical: Spacing.five, alignItems: 'center' },
 });

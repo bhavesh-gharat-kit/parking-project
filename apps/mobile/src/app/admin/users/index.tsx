@@ -5,14 +5,18 @@
  * find them among the disabled first, same reasoning as the admin location
  * list (Phase 04) listing inactive branches too.
  */
+import { Ionicons } from '@expo/vector-icons';
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, RefreshControl, StyleSheet, TextInput, View } from 'react-native';
 
 import type { AdminUser, Paginated } from '@parking/shared';
 
+import { Card } from '@/components/card';
+import { ScreenContainer } from '@/components/screen-container';
+import { TonePill } from '@/components/status-badge';
 import { ThemedText } from '@/components/themed-text';
-import { CardShadow, Spacing } from '@/constants/theme';
+import { Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { ApiError, apiRequest } from '@/lib/api';
 
@@ -20,6 +24,7 @@ export default function AdminUsersScreen() {
   const theme = useTheme();
   const [searchInput, setSearchInput] = useState('');
   const [search, setSearch] = useState('');
+  const [searchFocused, setSearchFocused] = useState(false);
   const [users, setUsers] = useState<AdminUser[] | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
@@ -50,17 +55,23 @@ export default function AdminUsersScreen() {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.background }]}>
+    <ScreenContainer>
       <TextInput
         value={searchInput}
         onChangeText={setSearchInput}
         onSubmitEditing={() => setSearch(searchInput.trim())}
+        onFocus={() => setSearchFocused(true)}
+        onBlur={() => setSearchFocused(false)}
         placeholder="Search name, email or phone"
         placeholderTextColor={theme.textSecondary}
         returnKeyType="search"
         style={[
           styles.search,
-          { color: theme.text, backgroundColor: theme.backgroundElement, borderColor: theme.border },
+          {
+            color: theme.text,
+            backgroundColor: searchFocused ? theme.background : theme.backgroundElement,
+            borderColor: searchFocused ? theme.primary : theme.borderStrong,
+          },
         ]}
       />
 
@@ -77,22 +88,30 @@ export default function AdminUsersScreen() {
             <RefreshControl refreshing={refreshing} onRefresh={() => void refresh()} tintColor={theme.text} />
           }
           ListEmptyComponent={
-            users === null ? null : <ThemedText themeColor="textSecondary">No users found.</ThemedText>
+            users === null ? null : (
+              <View style={styles.empty}>
+                <Ionicons name="people-outline" size={32} color={theme.textSecondary} />
+                <ThemedText themeColor="textSecondary">No users found.</ThemedText>
+              </View>
+            )
           }
           renderItem={({ item }) => (
-            <Pressable
-              onPress={() => router.push(`/admin/users/${item.id}`)}
-              style={[styles.card, { backgroundColor: theme.backgroundElement }]}
-            >
-              <View style={styles.cardHeader}>
-                <ThemedText type="smallBold">{item.name ?? '(no name on file)'}</ThemedText>
-                <ThemedText type="small" themeColor={item.isActive ? 'textSecondary' : 'danger'}>
-                  {item.isActive ? item.role : 'Disabled'}
+            <Pressable onPress={() => router.push(`/admin/users/${item.id}`)}>
+              <Card>
+                <View style={styles.cardHeader}>
+                  <ThemedText type="smallBold">{item.name ?? '(no name on file)'}</ThemedText>
+                  {item.isActive ? (
+                    <ThemedText type="small" themeColor="textSecondary">
+                      {item.role}
+                    </ThemedText>
+                  ) : (
+                    <TonePill label="Disabled" tone="bad" icon="ban-outline" />
+                  )}
+                </View>
+                <ThemedText type="small" themeColor="textSecondary">
+                  {item.email}
                 </ThemedText>
-              </View>
-              <ThemedText type="small" themeColor="textSecondary">
-                {item.email}
-              </ThemedText>
+              </Card>
             </Pressable>
           )}
         />
@@ -100,44 +119,40 @@ export default function AdminUsersScreen() {
 
       {loadError ? (
         <View style={[styles.banner, { backgroundColor: theme.backgroundElement, borderColor: theme.danger }]}>
-          <ThemedText type="small" themeColor="danger">
+          <Ionicons name="alert-circle" size={18} color={theme.danger} />
+          <ThemedText type="small" themeColor="danger" style={styles.bannerText}>
             {loadError}
           </ThemedText>
         </View>
       ) : null}
-    </View>
+    </ScreenContainer>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: Spacing.four,
-    gap: Spacing.three,
-  },
   search: {
-    borderRadius: 10,
-    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: Radius.control,
+    borderWidth: 1.5,
     paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.two,
+    paddingVertical: Spacing.three,
     fontSize: 16,
+    minHeight: 48,
   },
   loading: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   list: { gap: Spacing.two },
-  card: {
-    ...CardShadow,
-    borderRadius: 12,
-    padding: Spacing.three,
-    gap: Spacing.half,
-  },
+  empty: { alignItems: 'center', gap: Spacing.two, paddingVertical: Spacing.five },
   cardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
   banner: {
-    borderRadius: 10,
-    borderWidth: StyleSheet.hairlineWidth,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
+    borderRadius: Radius.control,
+    borderWidth: 1,
     padding: Spacing.three,
   },
+  bannerText: { flex: 1 },
 });

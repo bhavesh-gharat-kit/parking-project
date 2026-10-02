@@ -46,9 +46,10 @@ import {
 } from '@parking/shared';
 
 import { AppButton } from '@/components/app-button';
+import { Card } from '@/components/card';
 import { StatusBadge } from '@/components/status-badge';
 import { ThemedText } from '@/components/themed-text';
-import { CardShadow, Spacing } from '@/constants/theme';
+import { Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { ApiError, apiRequest } from '@/lib/api';
 
@@ -90,6 +91,7 @@ export default function AdminBookingDetailScreen() {
   const [rejecting, setRejecting] = useState(false);
   const [rejectMode, setRejectMode] = useState(false);
   const [reason, setReason] = useState('');
+  const [reasonFocused, setReasonFocused] = useState(false);
   const [screenshotViewerOpen, setScreenshotViewerOpen] = useState(false);
 
   const load = useCallback(async () => {
@@ -219,13 +221,13 @@ export default function AdminBookingDetailScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={() => void refresh()} tintColor={theme.text} />
         }
       >
-        <View style={[styles.header, { backgroundColor: theme.backgroundElement }]}>
+        <Card>
           <ThemedText type="small" themeColor="textSecondary">
             Booking number
           </ThemedText>
           <ThemedText type="subtitle">{booking.bookingNumber}</ThemedText>
           <StatusBadge status={booking.status} size="large" />
-        </View>
+        </Card>
 
         {booking.payment?.upiUtr || booking.payment?.utrScreenshotUrl ? (
           <View style={[styles.utrCallout, { backgroundColor: theme.backgroundSelected, borderColor: theme.primary }]}>
@@ -278,11 +280,11 @@ export default function AdminBookingDetailScreen() {
           </Modal>
         ) : null}
 
-        <View style={[styles.card, { backgroundColor: theme.backgroundElement }]}>
+        <Card padded={false} style={styles.rowsCard}>
           {rows.map((row, index) => (
             <SummaryRowView key={row.label} row={row} first={index === 0} />
           ))}
-        </View>
+        </Card>
 
         {isActionable(booking.status) && !rejectMode ? (
           <View style={styles.actions}>
@@ -305,12 +307,18 @@ export default function AdminBookingDetailScreen() {
             <TextInput
               value={reason}
               onChangeText={setReason}
+              onFocus={() => setReasonFocused(true)}
+              onBlur={() => setReasonFocused(false)}
               placeholder="e.g. UTR does not match any received payment (optional)"
               placeholderTextColor={theme.textSecondary}
               multiline
               style={[
                 styles.reasonInput,
-                { color: theme.text, backgroundColor: theme.background, borderColor: theme.border },
+                {
+                  color: theme.text,
+                  backgroundColor: reasonFocused ? theme.background : theme.backgroundElement,
+                  borderColor: reasonFocused ? theme.primary : theme.borderStrong,
+                },
               ]}
             />
             <View style={styles.actions}>
@@ -343,14 +351,8 @@ const styles = StyleSheet.create({
     gap: Spacing.three,
   },
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: Spacing.three },
-  header: {
-    ...CardShadow,
-    borderRadius: 12,
-    padding: Spacing.three,
-    gap: Spacing.half,
-  },
   utrCallout: {
-    borderRadius: 12,
+    borderRadius: Radius.surface,
     borderWidth: 2,
     padding: Spacing.three,
     gap: Spacing.one,
@@ -363,7 +365,7 @@ const styles = StyleSheet.create({
   screenshotThumb: {
     width: 120,
     height: 120,
-    borderRadius: 10,
+    borderRadius: Radius.control,
   },
   viewerBackdrop: {
     flex: 1,
@@ -381,9 +383,7 @@ const styles = StyleSheet.create({
     zIndex: 1,
     padding: Spacing.two,
   },
-  card: {
-    ...CardShadow,
-    borderRadius: 12,
+  rowsCard: {
     paddingHorizontal: Spacing.three,
   },
   row: {
@@ -397,14 +397,14 @@ const styles = StyleSheet.create({
   rowValue: { flex: 1, textAlign: 'right' },
   actions: { flexDirection: 'row', gap: Spacing.two },
   rejectBox: {
-    borderRadius: 12,
-    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: Radius.surface,
+    borderWidth: 1,
     padding: Spacing.three,
     gap: Spacing.two,
   },
   reasonInput: {
-    borderRadius: 10,
-    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: Radius.control,
+    borderWidth: 1.5,
     paddingHorizontal: Spacing.three,
     paddingVertical: Spacing.two,
     fontSize: 16,

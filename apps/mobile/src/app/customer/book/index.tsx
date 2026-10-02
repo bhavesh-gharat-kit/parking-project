@@ -7,14 +7,17 @@
  * admin deactivates disappears on the next fetch (§6, §23, Phase 04
  * acceptance).
  */
+import { Ionicons } from '@expo/vector-icons';
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, StyleSheet, View } from 'react-native';
 
 import type { ParkingLocation } from '@parking/shared';
 
+import { Card } from '@/components/card';
+import { ScreenContainer } from '@/components/screen-container';
 import { ThemedText } from '@/components/themed-text';
-import { CardShadow, Spacing } from '@/constants/theme';
+import { Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { apiRequest, ApiError } from '@/lib/api';
 import { useBookingDraftStore } from '@/stores/booking-draft-store';
@@ -48,7 +51,7 @@ export default function BookLocationScreen() {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.background }]}>
+    <ScreenContainer>
       <ThemedText type="small" themeColor="textSecondary">
         Choose where you&apos;re parking.
       </ThemedText>
@@ -64,20 +67,22 @@ export default function BookLocationScreen() {
           contentContainerStyle={styles.list}
           ListEmptyComponent={
             locations === null ? null : (
-              <ThemedText themeColor="textSecondary">
-                No parking locations are available right now.
-              </ThemedText>
+              <View style={styles.empty}>
+                <Ionicons name="location-outline" size={32} color={theme.textSecondary} />
+                <ThemedText themeColor="textSecondary">
+                  No parking locations are available right now.
+                </ThemedText>
+              </View>
             )
           }
           renderItem={({ item }) => (
-            <Pressable
-              onPress={() => selectLocation(item)}
-              style={[styles.card, { backgroundColor: theme.backgroundElement }]}
-            >
-              <ThemedText type="smallBold">{item.name}</ThemedText>
-              <ThemedText type="small" themeColor="textSecondary">
-                {item.addressLine}, {item.city}
-              </ThemedText>
+            <Pressable onPress={() => selectLocation(item)}>
+              <Card>
+                <ThemedText type="smallBold">{item.name}</ThemedText>
+                <ThemedText type="small" themeColor="textSecondary">
+                  {item.addressLine}, {item.city}
+                </ThemedText>
+              </Card>
             </Pressable>
           )}
         />
@@ -85,34 +90,29 @@ export default function BookLocationScreen() {
 
       {loadError ? (
         <View style={[styles.banner, { backgroundColor: theme.backgroundElement, borderColor: theme.danger }]}>
-          <ThemedText type="small" themeColor="danger">
+          <Ionicons name="alert-circle" size={18} color={theme.danger} />
+          <ThemedText type="small" themeColor="danger" style={styles.bannerText}>
             {loadError}
           </ThemedText>
         </View>
       ) : null}
-    </View>
+    </ScreenContainer>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: Spacing.four,
-    gap: Spacing.three,
-  },
   loading: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   list: {
     gap: Spacing.two,
   },
-  card: {
-    ...CardShadow,
-    borderRadius: 12,
-    padding: Spacing.three,
-    gap: Spacing.half,
-  },
+  empty: { alignItems: 'center', gap: Spacing.two, paddingVertical: Spacing.five },
   banner: {
-    borderRadius: 10,
-    borderWidth: StyleSheet.hairlineWidth,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
+    borderRadius: Radius.control,
+    borderWidth: 1,
     padding: Spacing.three,
   },
+  bannerText: { flex: 1 },
 });

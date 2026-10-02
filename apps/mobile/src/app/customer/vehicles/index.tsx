@@ -7,6 +7,7 @@
  * rather than remounting it — a mount-only fetch would show a stale list right
  * after adding a vehicle.
  */
+import { Ionicons } from '@expo/vector-icons';
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { Alert, FlatList, StyleSheet, View } from 'react-native';
@@ -14,9 +15,10 @@ import { Alert, FlatList, StyleSheet, View } from 'react-native';
 import { VEHICLE_TYPE_LABELS, type Vehicle } from '@parking/shared';
 
 import { AppButton } from '@/components/app-button';
+import { Card } from '@/components/card';
 import { ScreenContainer } from '@/components/screen-container';
 import { ThemedText } from '@/components/themed-text';
-import { CardShadow, Spacing } from '@/constants/theme';
+import { Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { apiRequest, ApiError } from '@/lib/api';
 
@@ -79,13 +81,16 @@ export default function VehiclesScreen() {
         contentContainerStyle={styles.list}
         ListEmptyComponent={
           vehicles === null ? null : (
-            <ThemedText themeColor="textSecondary">
-              No vehicles yet. Add one to book parking for it.
-            </ThemedText>
+            <View style={styles.empty}>
+              <Ionicons name="car-outline" size={32} color={theme.textSecondary} />
+              <ThemedText themeColor="textSecondary">
+                No vehicles yet. Add one to book parking for it.
+              </ThemedText>
+            </View>
           )
         }
         renderItem={({ item }) => (
-          <View style={[styles.card, { backgroundColor: theme.backgroundElement }]}>
+          <Card style={styles.card}>
             <View style={styles.cardInfo}>
               <ThemedText type="smallBold">{item.number}</ThemedText>
               <ThemedText type="small" themeColor="textSecondary">
@@ -107,13 +112,14 @@ export default function VehiclesScreen() {
                 onPress={() => confirmDelete(item)}
               />
             </View>
-          </View>
+          </Card>
         )}
       />
 
       {loadError ? (
         <View style={[styles.banner, { backgroundColor: theme.backgroundElement, borderColor: theme.danger }]}>
-          <ThemedText type="small" themeColor="danger">
+          <Ionicons name="alert-circle" size={18} color={theme.danger} />
+          <ThemedText type="small" themeColor="danger" style={styles.bannerText}>
             {loadError}
           </ThemedText>
         </View>
@@ -129,9 +135,6 @@ const styles = StyleSheet.create({
     gap: Spacing.two,
   },
   card: {
-    ...CardShadow,
-    borderRadius: 12,
-    padding: Spacing.three,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -139,9 +142,14 @@ const styles = StyleSheet.create({
   },
   cardInfo: { gap: Spacing.half, flexShrink: 1 },
   cardActions: { flexDirection: 'row', gap: Spacing.two },
+  empty: { alignItems: 'center', gap: Spacing.two, paddingVertical: Spacing.five },
   banner: {
-    borderRadius: 10,
-    borderWidth: StyleSheet.hairlineWidth,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
+    borderRadius: Radius.control,
+    borderWidth: 1,
     padding: Spacing.three,
   },
+  bannerText: { flex: 1 },
 });

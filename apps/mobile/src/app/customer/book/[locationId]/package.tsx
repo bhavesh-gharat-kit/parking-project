@@ -19,6 +19,7 @@
  * so a back button returning to a package list that would create a second
  * booking is exactly what should not be there.
  */
+import { Ionicons } from '@expo/vector-icons';
 import { router, Stack, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, StyleSheet, View } from 'react-native';
@@ -31,9 +32,10 @@ import {
 } from '@parking/shared';
 
 import { AppButton } from '@/components/app-button';
+import { Card } from '@/components/card';
 import { ScreenContainer } from '@/components/screen-container';
 import { ThemedText } from '@/components/themed-text';
-import { CardShadow, Spacing } from '@/constants/theme';
+import { Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { ApiError, apiRequest } from '@/lib/api';
 import { useBookingDraftStore } from '@/stores/booking-draft-store';
@@ -139,24 +141,20 @@ export default function BookPackageScreen() {
             contentContainerStyle={styles.list}
             ListEmptyComponent={
               rates === null ? null : (
-                <ThemedText themeColor="textSecondary">
-                  No {VEHICLE_TYPE_LABELS[vehicleType].toLowerCase()} packages at this location yet.
-                </ThemedText>
+                <View style={styles.empty}>
+                  <Ionicons name="pricetag-outline" size={32} color={theme.textSecondary} />
+                  <ThemedText themeColor="textSecondary">
+                    No {VEHICLE_TYPE_LABELS[vehicleType].toLowerCase()} packages at this location yet.
+                  </ThemedText>
+                </View>
               )
             }
             renderItem={({ item }) => (
-              <Pressable
-                onPress={() => setRate(item.id)}
-                style={[
-                  styles.card,
-                  {
-                    backgroundColor:
-                      rateId === item.id ? theme.backgroundSelected : theme.backgroundElement,
-                  },
-                ]}
-              >
-                <ThemedText type="smallBold">{item.label}</ThemedText>
-                <ThemedText themeColor="primary">{formatInr(item.priceInPaise)}</ThemedText>
+              <Pressable onPress={() => setRate(item.id)}>
+                <Card style={rateId === item.id && { backgroundColor: theme.backgroundSelected }}>
+                  <ThemedText type="smallBold">{item.label}</ThemedText>
+                  <ThemedText themeColor="primary">{formatInr(item.priceInPaise)}</ThemedText>
+                </Card>
               </Pressable>
             )}
           />
@@ -169,7 +167,8 @@ export default function BookPackageScreen() {
               { backgroundColor: theme.backgroundElement, borderColor: theme.danger },
             ]}
           >
-            <ThemedText type="small" themeColor="danger">
+            <Ionicons name="alert-circle" size={18} color={theme.danger} />
+            <ThemedText type="small" themeColor="danger" style={styles.bannerText}>
               {banner}
             </ThemedText>
           </View>
@@ -193,15 +192,14 @@ export default function BookPackageScreen() {
 const styles = StyleSheet.create({
   loading: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   list: { gap: Spacing.two },
-  card: {
-    ...CardShadow,
-    borderRadius: 12,
-    padding: Spacing.three,
-    gap: Spacing.half,
-  },
+  empty: { alignItems: 'center', gap: Spacing.two, paddingVertical: Spacing.five },
   banner: {
-    borderRadius: 10,
-    borderWidth: StyleSheet.hairlineWidth,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
+    borderRadius: Radius.control,
+    borderWidth: 1,
     padding: Spacing.three,
   },
+  bannerText: { flex: 1 },
 });

@@ -5,6 +5,7 @@
  * possible from the same screen. Changing a price here is reflected in the
  * customer app on its next fetch — no app rebuild (§24, Phase 04 acceptance).
  */
+import { Ionicons } from '@expo/vector-icons';
 import { router, Stack, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { Alert, FlatList, StyleSheet, View } from 'react-native';
@@ -17,9 +18,11 @@ import {
 } from '@parking/shared';
 
 import { AppButton } from '@/components/app-button';
+import { Card } from '@/components/card';
 import { ScreenContainer } from '@/components/screen-container';
+import { TonePill } from '@/components/status-badge';
 import { ThemedText } from '@/components/themed-text';
-import { CardShadow, Spacing } from '@/constants/theme';
+import { Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { apiRequest, ApiError } from '@/lib/api';
 
@@ -102,21 +105,26 @@ export default function AdminRatesScreen() {
           contentContainerStyle={styles.list}
           ListEmptyComponent={
             rates === null ? null : (
-              <ThemedText themeColor="textSecondary">
-                No rates yet. Add one so customers have something to book.
-              </ThemedText>
+              <View style={styles.empty}>
+                <Ionicons name="pricetag-outline" size={32} color={theme.textSecondary} />
+                <ThemedText themeColor="textSecondary">
+                  No rates yet. Add one so customers have something to book.
+                </ThemedText>
+              </View>
             )
           }
           renderItem={({ item }) => (
-            <View style={[styles.card, { backgroundColor: theme.backgroundElement }]}>
+            <Card style={styles.card}>
               <View style={styles.cardInfo}>
                 <View style={styles.titleRow}>
                   <ThemedText type="smallBold">
                     {VEHICLE_TYPE_LABELS[item.vehicleType]} · {item.label}
                   </ThemedText>
-                  <ThemedText type="small" themeColor={item.isActive ? 'primary' : 'danger'}>
-                    {item.isActive ? 'Active' : 'Retired'}
-                  </ThemedText>
+                  <TonePill
+                    label={item.isActive ? 'Active' : 'Retired'}
+                    tone={item.isActive ? 'done' : 'bad'}
+                    icon={item.isActive ? 'checkmark-circle' : 'pause-circle-outline'}
+                  />
                 </View>
                 <ThemedText type="small" themeColor="textSecondary">
                   {formatInr(item.priceInPaise)}
@@ -136,13 +144,14 @@ export default function AdminRatesScreen() {
                   onPress={() => confirmToggle(item)}
                 />
               </View>
-            </View>
+            </Card>
           )}
         />
 
         {loadError ? (
           <View style={[styles.banner, { backgroundColor: theme.backgroundElement, borderColor: theme.danger }]}>
-            <ThemedText type="small" themeColor="danger">
+            <Ionicons name="alert-circle" size={18} color={theme.danger} />
+            <ThemedText type="small" themeColor="danger" style={styles.bannerText}>
               {loadError}
             </ThemedText>
           </View>
@@ -162,9 +171,6 @@ const styles = StyleSheet.create({
     gap: Spacing.two,
   },
   card: {
-    ...CardShadow,
-    borderRadius: 12,
-    padding: Spacing.three,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -173,9 +179,14 @@ const styles = StyleSheet.create({
   cardInfo: { gap: Spacing.half, flexShrink: 1 },
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two, flexShrink: 1 },
   cardActions: { flexDirection: 'row', gap: Spacing.two },
+  empty: { alignItems: 'center', gap: Spacing.two, paddingVertical: Spacing.five },
   banner: {
-    borderRadius: 10,
-    borderWidth: StyleSheet.hairlineWidth,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
+    borderRadius: Radius.control,
+    borderWidth: 1,
     padding: Spacing.three,
   },
+  bannerText: { flex: 1 },
 });

@@ -2,9 +2,25 @@
   "version": "0.0.1",
   "configurations": [
     {
+      "name": "api",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "run",
+        "dev",
+        "--prefix",
+        "apps/api"
+      ],
+      "port": 3000
+    },
+    {
       "name": "mobile-web",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "web", "--prefix", "apps/mobile"],
+      "runtimeArgs": [
+        "run",
+        "web",
+        "--prefix",
+        "apps/mobile"
+      ],
       "port": 8081
     }
   ]
