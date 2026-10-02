@@ -20,7 +20,19 @@ export const Colors = {
     onPrimary: '#ffffff',
     /** Validation errors and destructive actions. */
     danger: '#D92D20',
+    /** Completed/confirmed outcomes — the third status state `StatusBadge` needs. */
+    success: '#0E7A4B',
+    /** Waiting-on-someone states: pending payment, pending approval. */
+    warning: '#9A5B00',
+    /** Hairlines and card edges — deliberately quiet. */
     border: '#D7DAE0',
+    /**
+     * The outline of something you can type in or press. `border` is 1.4:1 on
+     * white, which is fine for a divider and too faint for a control's own
+     * boundary (WCAG 1.4.11 asks 3:1 there) — that gap is most of why the forms
+     * read as unstyled.
+     */
+    borderStrong: '#8C94A1',
   },
   dark: {
     text: '#ffffff',
@@ -33,7 +45,12 @@ export const Colors = {
     primary: '#4C9FE0',
     onPrimary: '#04131F',
     danger: '#FF6B60',
+    // Lightened for the same reason as `primary`: the light-mode green and
+    // amber are both under 2:1 on black.
+    success: '#3FD08A',
+    warning: '#F5B661',
     border: '#3A3D42',
+    borderStrong: '#666B73',
   },
 } as const;
 
@@ -77,6 +94,23 @@ export const Spacing = {
 export const MaxContentWidth = 800;
 
 /**
+ * Corner radii. Before this existed, `10` and `12` were typed literally in 59
+ * places across the app with no rule for which went where — these are those two
+ * values plus names for the rule: controls are 10, the surfaces they sit on are
+ * 12. Phase UI-02 replaces the remaining literals.
+ */
+export const Radius = {
+  /** Inputs, buttons, banners — anything you type in or press. */
+  control: 10,
+  /** Cards and other surfaces that group controls. */
+  surface: 12,
+  /** The brand mark's tile and other hero surfaces. */
+  large: 16,
+  /** Fully rounded: status badges, avatars. */
+  pill: 999,
+} as const;
+
+/**
  * Subtle elevation for `backgroundElement` cards — without it, dark mode is
  * flat black-on-near-black with no visible depth (`01-ui-ux-findings.md`,
  * "P2 — No visual language for professional beyond icons"). `elevation` alone
@@ -89,5 +123,24 @@ export const CardShadow = Platform.select({
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.12,
     shadowRadius: 3,
+  },
+});
+
+/**
+ * One step above `CardShadow`, for the primary button only.
+ *
+ * The primary and secondary buttons are the same size and the same shape; on a
+ * card they previously differed only in fill. Lifting the primary off the page
+ * is what makes "the one you meant to press" readable at a glance rather than
+ * by colour alone. Dropped while pressed and while disabled, so the shadow is
+ * carrying state rather than just decorating.
+ */
+export const ButtonShadow = Platform.select({
+  android: { elevation: 3 },
+  default: {
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.18,
+    shadowRadius: 4,
   },
 });

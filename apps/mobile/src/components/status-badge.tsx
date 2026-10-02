@@ -11,18 +11,28 @@ import { StyleSheet, View } from 'react-native';
 import { BOOKING_STATUS_LABELS, type BookingStatus } from '@parking/shared';
 
 import { ThemedText } from '@/components/themed-text';
-import { Spacing } from '@/constants/theme';
+import { Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
-type Tone = 'good' | 'bad' | 'neutral';
+/**
+ * Three tones, now that `constants/theme.ts` has the colours to say them with.
+ *
+ * The split that matters is the one this could not previously make: the four
+ * waiting states were `neutral` grey, indistinguishable from an inert label, so
+ * a booking that needed the customer to go and pay looked like one that needed
+ * nothing. They are `waiting` amber now — something is owed, by someone. `done`
+ * moved off `primary` onto the real `success` green, which frees brand blue to
+ * mean "the thing to press" rather than "finished".
+ */
+type Tone = 'done' | 'waiting' | 'bad';
 
 const STATUS_TONE: Record<BookingStatus, Tone> = {
-  PENDING: 'neutral',
-  PENDING_PAYMENT: 'neutral',
-  PAYMENT_VERIFICATION: 'neutral',
-  PENDING_APPROVAL: 'neutral',
-  CONFIRMED: 'good',
-  COMPLETED: 'good',
+  PENDING: 'waiting',
+  PENDING_PAYMENT: 'waiting',
+  PAYMENT_VERIFICATION: 'waiting',
+  PENDING_APPROVAL: 'waiting',
+  CONFIRMED: 'done',
+  COMPLETED: 'done',
   REJECTED: 'bad',
   CANCELLED: 'bad',
   EXPIRED: 'bad',
@@ -50,11 +60,12 @@ export function StatusBadge({ status, size = 'default' }: StatusBadgeProps) {
   const theme = useTheme();
   const tone = STATUS_TONE[status];
 
-  // Tinted background derived from the existing theme tokens (8-digit hex
-  // alpha) rather than new color tokens, so this reads correctly in both
-  // themes without expanding `constants/theme.ts`.
-  const foreground = tone === 'good' ? theme.primary : tone === 'bad' ? theme.danger : theme.textSecondary;
-  const background = tone === 'neutral' ? theme.backgroundSelected : `${foreground}26`;
+  // The fill is the foreground at 15% (the `26` alpha suffix) rather than a
+  // second token per tone: one colour per status is one thing to keep legible
+  // in both themes, and the tint follows it for free.
+  const foreground =
+    tone === 'done' ? theme.success : tone === 'waiting' ? theme.warning : theme.danger;
+  const background = `${foreground}26`;
   const iconSize = size === 'large' ? 15 : 13;
 
   return (
@@ -75,7 +86,7 @@ const styles = StyleSheet.create({
     gap: Spacing.half,
     paddingHorizontal: Spacing.two,
     paddingVertical: Spacing.half,
-    borderRadius: 999,
+    borderRadius: Radius.pill,
   },
   badgeLarge: {
     paddingHorizontal: Spacing.three,

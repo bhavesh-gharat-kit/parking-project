@@ -151,7 +151,16 @@ export default function UpiPaymentScreen() {
       // `"DOM"` in `lib`, so this cast is for the type checker, not the runtime.
       form.append('screenshot', screenshot as unknown as Blob);
 
-      await apiRequest<Booking>(`/api/bookings/${id}/utr`, { method: 'POST', body: form });
+      // A multi-MB photo on a weak or congested mobile connection (the exact
+      // condition at a parking gate this app is built for) routinely takes
+      // longer than the global 20s API timeout, which exists to catch an
+      // unreachable server, not a slow-but-working upload. Give this one call
+      // real headroom instead of failing a perfectly good upload mid-transfer.
+      await apiRequest<Booking>(`/api/bookings/${id}/utr`, {
+        method: 'POST',
+        body: form,
+        timeoutMs: 90_000,
+      });
       router.replace(`/customer/bookings/${id}`);
     } catch (error) {
       setFormError(applyApiError(error, setError));

@@ -76,10 +76,19 @@ type RequestOptions = {
   /** Skips the Authorization header (sign-in, health check). */
   anonymous?: boolean;
   signal?: AbortSignal;
+  /**
+   * Overrides `config.apiTimeoutMs` for this one call. A multipart file
+   * upload (the UTR screenshot) needs far more headroom than a JSON request —
+   * a multi-MB photo on a weak or congested mobile connection routinely takes
+   * longer than the 20s default built for "is the server even reachable",
+   * and the default's own abort message ("Could not reach the server") is
+   * misleading for what is actually just a slow upload in progress.
+   */
+  timeoutMs?: number;
 };
 
 export async function apiRequest<T>(path: string, options: RequestOptions = {}): Promise<T> {
-  const { method = 'GET', body, anonymous = false, signal } = options;
+  const { method = 'GET', body, anonymous = false, signal, timeoutMs = config.apiTimeoutMs } = options;
 
   const url = `${config.apiBaseUrl}${path.startsWith('/') ? path : `/${path}`}`;
 
@@ -96,7 +105,7 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
   // Without a timeout a request to an unreachable host hangs until the OS gives
   // up, which on a weak connection at the gate looks like a frozen app.
   const timeout = new AbortController();
-  const timer = setTimeout(() => timeout.abort(), config.apiTimeoutMs);
+  const timer = setTimeout(() => timeout.abort(), timeoutMs);
 
   let response: Response;
   try {
@@ -109,6 +118,13 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
   } catch (error) {
     clearTimeout(timer);
     const aborted = error instanceof Error && error.name === 'AbortError';
+    // The generic message below is deliberately vague for the customer, but it
+    // means every distinct failure (DNS, TLS, a file fetch() couldn't read,
+    // an actual timeout) looks identical from the outside. Log the real one.
+    console.warn(
+      `[apiRequest] ${method} ${url} failed:`,
+      error instanceof Error ? `${error.name}: ${error.message}` : error,
+    );
     throw new ApiError(
       'SERVICE_UNAVAILABLE',
       aborted

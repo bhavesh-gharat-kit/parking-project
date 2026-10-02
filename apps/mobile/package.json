@@ -13,6 +13,7 @@
     "lint": "expo lint",
     "typecheck": "tsc --noEmit",
     "doctor": "expo-doctor",
+    "icons": "node scripts/generate-app-icons.mjs",
     "build:dev": "eas build --profile development --platform android",
     "build:preview": "eas build --profile preview --platform android"
   },
@@ -57,6 +58,7 @@
     "@types/react": "~19.2.2",
     "eslint": "^10.11.0",
     "eslint-config-expo": "^57.0.2",
+    "sharp": "^0.35.5",
     "typescript": "~6.0.3"
   }
 }

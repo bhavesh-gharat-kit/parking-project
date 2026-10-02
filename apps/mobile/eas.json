@@ -13,7 +13,8 @@
         "buildType": "apk"
       },
       "env": {
-        "APP_VARIANT": "development"
+        "APP_VARIANT": "development",
+        "EAS_PROJECT_ID": "17ed2d4d-71eb-4698-b7bd-e8b2b47a17e3"
       }
     },
     "preview": {
@@ -25,7 +26,8 @@
       "env": {
         "APP_VARIANT": "preview",
         "EXPO_PUBLIC_API_BASE_URL": "https://parking-app.kumarinfotech.com",
-        "EXPO_PUBLIC_API_TIMEOUT_SECONDS": "20"
+        "EXPO_PUBLIC_API_TIMEOUT_SECONDS": "20",
+        "EAS_PROJECT_ID": "17ed2d4d-71eb-4698-b7bd-e8b2b47a17e3"
       }
     },
     "production": {
@@ -36,7 +38,8 @@
         "buildType": "app-bundle"
       },
       "env": {
-        "APP_VARIANT": "production"
+        "APP_VARIANT": "production",
+        "EAS_PROJECT_ID": "17ed2d4d-71eb-4698-b7bd-e8b2b47a17e3"
       }
     }
   },

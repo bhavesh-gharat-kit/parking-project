@@ -7,6 +7,7 @@
  * same form a customer does and lands somewhere different because of what the
  * backend said about their account, which `src/app/index.tsx` acts on.
  */
+import { Ionicons } from '@expo/vector-icons';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Link, router } from 'expo-router';
 import { useState } from 'react';
@@ -21,9 +22,11 @@ import {
 } from '@parking/shared';
 
 import { AppButton } from '@/components/app-button';
+import { BrandHeader } from '@/components/brand-header';
+import { Divider } from '@/components/divider';
 import { TextField } from '@/components/text-field';
 import { ThemedText } from '@/components/themed-text';
-import { Spacing } from '@/constants/theme';
+import { Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { applyApiError } from '@/lib/form-errors';
 import { GoogleSignInError, isGoogleSignInAvailable } from '@/lib/google-auth';
@@ -89,16 +92,22 @@ export default function SignInScreen() {
       keyboardShouldPersistTaps="handled"
       bottomOffset={Spacing.four}
     >
+      {/* The brand mark goes above the greeting, not instead of it: this is the
+          first screen a new customer sees and, until now, the only thing on it
+          saying whose app this is was the Android app name. */}
+      <BrandHeader variant="large" style={styles.brand} />
+
       <View style={styles.header}>
-        <ThemedText type="subtitle">Welcome back</ThemedText>
-        <ThemedText themeColor="textSecondary">
+        <ThemedText type="heading">Welcome back</ThemedText>
+        <ThemedText type="small" themeColor="textSecondary" style={styles.centered}>
           Sign in to book parking and see your bookings.
         </ThemedText>
       </View>
 
       {formError ? (
         <View style={[styles.banner, { backgroundColor: theme.backgroundElement, borderColor: theme.danger }]}>
-          <ThemedText type="small" themeColor="danger">
+          <Ionicons name="alert-circle" size={18} color={theme.danger} />
+          <ThemedText type="small" themeColor="danger" style={styles.bannerText}>
             {formError}
           </ThemedText>
         </View>
@@ -145,13 +154,7 @@ export default function SignInScreen() {
 
       {googleAvailable ? (
         <>
-          <View style={styles.dividerRow}>
-            <View style={[styles.divider, { backgroundColor: theme.border }]} />
-            <ThemedText type="small" themeColor="textSecondary">
-              or
-            </ThemedText>
-            <View style={[styles.divider, { backgroundColor: theme.border }]} />
-          </View>
+          <Divider label="or" />
 
           <AppButton
             label="Sign in with Google"
@@ -185,19 +188,18 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     justifyContent: 'center',
   },
-  header: { gap: Spacing.one },
+  brand: { marginBottom: Spacing.two },
+  header: { gap: Spacing.one, alignItems: 'center' },
   banner: {
-    borderRadius: 10,
-    borderWidth: StyleSheet.hairlineWidth,
-    padding: Spacing.three,
-  },
-  centered: { textAlign: 'center' },
-  dividerRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.two,
+    borderRadius: Radius.control,
+    borderWidth: 1,
+    padding: Spacing.three,
   },
-  divider: { flex: 1, height: StyleSheet.hairlineWidth },
+  bannerText: { flex: 1 },
+  centered: { textAlign: 'center' },
   footer: {
     flexDirection: 'row',
     justifyContent: 'center',
