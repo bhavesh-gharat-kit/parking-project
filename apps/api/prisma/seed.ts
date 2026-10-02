@@ -21,7 +21,10 @@ import { formatDuration } from '@parking/shared';
 import 'dotenv/config';
 
 const DEFAULT_SETTINGS: Record<string, string> = {
-  'business.name': 'Pay & Park',
+  // D-UI1 (`_/ui-prompts/00-README.md`): "Kumar Enterprises" is the company
+  // name shown on the receipt and the in-app brand header; "Pay & Park" stays
+  // the installed app's own name (`app.config.ts`'s `VARIANTS`), not this.
+  'business.name': 'Kumar Enterprises',
   // Udaykumar Mane, the on-site support contact per `_/by-client/file.txt` —
   // shown on the customer receipt (`receipt.tsx`). Not Rajkumar Mane's number
   // (the admin/operator): that one belongs on his ADMIN user account, which

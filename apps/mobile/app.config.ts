@@ -123,6 +123,20 @@ export default ({ config }: ConfigContext): ExpoConfig => {
           cameraPermission: 'Pay & Park needs access to your camera to take a photo of your payment screenshot.',
         },
       ],
+      /**
+       * `expo-print` and `expo-sharing` (UI-03, receipt PDF/share) are new
+       * native modules but deliberately have NO entry here: both packages'
+       * own READMEs say "Configure for Android: No additional set up
+       * necessary" for the APIs this app uses (`Print.printAsync`/
+       * `printToFileAsync`, `Sharing.shareAsync` — all outbound). `expo-sharing`
+       * does ship a config plugin, but it only wires up *receiving* shares
+       * from other apps (an Android intent filter / iOS share extension),
+       * which this app doesn't use — adding it would pull in native changes
+       * for a feature that isn't built. Still, being new native modules at
+       * all, the dev client needs one rebuild (`npm run build:dev`) before
+       * Download/Share work on a device — a JS reload alone is not enough,
+       * same as every other native-module addition in this list.
+       */
     ],
 
     experiments: {
