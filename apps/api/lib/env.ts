@@ -69,6 +69,26 @@ const EnvSchema = z.object({
    * for that one provider).
    */
   STORAGE_PROVIDER: z.enum(['local', 'mediahost']).default('mediahost'),
+
+  // ── Phase 15 (forgot-password OTP email, via Brevo) ──
+  /**
+   * Transactional email, used by exactly one thing: the 6-digit password-reset
+   * code (`lib/notifications/password-reset-email.ts`).
+   *
+   * All three are optional at boot, the same way `GOOGLE_WEB_CLIENT_ID` above is.
+   * The API has to keep serving bookings on a VPS where email was never set up —
+   * forgot-password is the only flow that degrades, and `sendEmail` throws a
+   * readable `EmailNotConfiguredError` naming the missing variable at the moment
+   * a send is actually attempted, rather than the whole backend refusing to start
+   * over a feature most customers never reach.
+   *
+   * `EMAIL_FROM` must be an address verified under Brevo → Senders. Brevo rejects
+   * a send from anything else, so a plausible-looking but unverified from-address
+   * fails at the API call, not here.
+   */
+  BREVO_API_KEY: z.string().optional(),
+  EMAIL_FROM: z.string().email('EMAIL_FROM must be an email address').optional(),
+  EMAIL_FROM_NAME: z.string().optional(),
 });
 
 const parsed = EnvSchema.safeParse(process.env);

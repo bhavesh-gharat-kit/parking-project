@@ -13,6 +13,8 @@
  *  - A dead network or a sleeping VPS becomes a typed error with a readable
  *    message rather than an unhandled promise rejection at a parking gate.
  */
+import { File, UploadType } from 'expo-file-system';
+
 import type { ApiErrorCode, ApiResponse } from '@parking/shared';
 
 import { config } from './config';
@@ -136,15 +138,21 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
     clearTimeout(timer);
   }
 
+  const bodyText = await response.text();
+  return resolvePayload<T>(bodyText, response.status, anonymous);
+}
+
+/** Shared by `apiRequest` and `apiUpload` — both end with "parse the envelope, handle a 401". */
+function resolvePayload<T>(bodyText: string, status: number, anonymous: boolean): T {
   let payload: ApiResponse<T> | null = null;
   try {
-    payload = (await response.json()) as ApiResponse<T>;
+    payload = JSON.parse(bodyText) as ApiResponse<T>;
   } catch {
     // Non-JSON body — an Nginx error page, or a crash before the handler ran.
   }
 
   if (!payload) {
-    throw new ApiError('INTERNAL_ERROR', 'The server returned an unreadable response.', response.status);
+    throw new ApiError('INTERNAL_ERROR', 'The server returned an unreadable response.', status);
   }
 
   if (!payload.ok) {
@@ -155,8 +163,88 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
       onUnauthorized();
     }
 
-    throw new ApiError(payload.error.code, payload.error.message, response.status, payload.error.fields);
+    throw new ApiError(payload.error.code, payload.error.message, status, payload.error.fields);
   }
 
   return payload.data;
+}
+
+type UploadFileOptions = {
+  /** Local `file://` or `content://` URI (e.g. from `expo-image-picker`) to upload. */
+  fileUri: string;
+  /** Multipart field name the backend's route handler reads the file from. */
+  fieldName: string;
+  mimeType: string;
+  /** Extra multipart form fields sent alongside the file. */
+  fields?: Record<string, string>;
+  anonymous?: boolean;
+  timeoutMs?: number;
+};
+
+/**
+ * Uploads a local file as `multipart/form-data` — the one other shape of
+ * request this app makes, alongside `apiRequest`'s JSON/plain-FormData calls.
+ *
+ * Deliberately NOT built on `fetch()`/`FormData`/`Blob` like `apiRequest` is.
+ * Two different failure modes showed up going through RN's JS networking for
+ * a multi-MB local file: the New Architecture's native module rejecting a
+ * plain `{ uri, name, type }` FormData part outright ("Unsupported
+ * FormDataPart implementation"), and — after switching to a real `Blob` via
+ * `fetch(uri).then(r => r.blob())` — the upload stalling indefinitely on a
+ * memory-constrained device, past even this function's own timeout, with no
+ * error ever surfacing. `expo-file-system`'s upload task reads the file and
+ * builds the multipart body in native code (OkHttp on Android, URLSession on
+ * iOS) instead of the JS bridge, which is the path each platform has actually
+ * hardened for this.
+ */
+export async function apiUpload<T>(path: string, options: UploadFileOptions): Promise<T> {
+  const {
+    fileUri,
+    fieldName,
+    mimeType,
+    fields,
+    anonymous = false,
+    timeoutMs = config.apiTimeoutMs,
+  } = options;
+
+  const url = `${config.apiBaseUrl}${path.startsWith('/') ? path : `/${path}`}`;
+
+  const headers: Record<string, string> = { Accept: 'application/json' };
+  if (!anonymous) {
+    const token = getAuthToken();
+    if (token) headers.Authorization = `Bearer ${token}`;
+  }
+
+  const timeout = new AbortController();
+  const timer = setTimeout(() => timeout.abort(), timeoutMs);
+
+  let result: { body: string; status: number };
+  try {
+    result = await new File(fileUri).upload(url, {
+      httpMethod: 'POST',
+      uploadType: UploadType.MULTIPART,
+      fieldName,
+      mimeType,
+      parameters: fields,
+      headers,
+      signal: timeout.signal,
+    });
+  } catch (error) {
+    const aborted = error instanceof Error && error.name === 'AbortError';
+    console.warn(
+      `[apiUpload] POST ${url} failed:`,
+      error instanceof Error ? `${error.name}: ${error.message}` : error,
+    );
+    throw new ApiError(
+      'SERVICE_UNAVAILABLE',
+      aborted
+        ? 'The server took too long to respond. Check your connection and try again.'
+        : 'Could not reach the server. Check your connection and try again.',
+      0,
+    );
+  } finally {
+    clearTimeout(timer);
+  }
+
+  return resolvePayload<T>(result.body, result.status, anonymous);
 }

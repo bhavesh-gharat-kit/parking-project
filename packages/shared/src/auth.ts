@@ -15,6 +15,7 @@ import { UserRoleSchema } from './enums';
 import {
   EmailSchema,
   OptionalIndianPhoneSchema,
+  OtpCodeSchema,
   PasswordSchema,
 } from './schemas';
 
@@ -114,6 +115,123 @@ export const ChangePasswordFormSchema = ChangePasswordBaseSchema.extend({
   });
 export type ChangePasswordForm = z.input<typeof ChangePasswordFormSchema>;
 export type ChangePasswordFormParsed = z.output<typeof ChangePasswordFormSchema>;
+
+/* ──────────────────── Forgot password / OTP reset ──────────────────── */
+
+/**
+ * How long the server makes a customer wait before it will send a second code
+ * to the same address (`apps/api/lib/auth/password-reset.ts`).
+ *
+ * Shared rather than duplicated because the RN screen counts the same window
+ * down on its "Resend code" button. A client timer that disagreed with the
+ * server would either offer a resend that silently does nothing — the server
+ * answers the same generic success either way, so the customer would be told a
+ * code is on its way when none was sent — or keep the button disabled after the
+ * server was ready again.
+ */
+export const OTP_RESEND_COOLDOWN_SECONDS = 60;
+
+/**
+ * `POST /api/auth/forgot-password/request-otp` — step one: an email address, and
+ * nothing else.
+ *
+ * There is no "and here is who I am" field, and none is possible: the endpoint's
+ * whole job is to decide for itself whether this address has a resettable
+ * account, and to answer the same way whatever it decides.
+ */
+export const ForgotPasswordRequestOtpRequestSchema = z.object({
+  email: EmailSchema,
+});
+export type ForgotPasswordRequestOtpRequest = z.input<
+  typeof ForgotPasswordRequestOtpRequestSchema
+>;
+export type ForgotPasswordRequestOtpRequestParsed = z.output<
+  typeof ForgotPasswordRequestOtpRequestSchema
+>;
+
+/**
+ * The one response `request-otp` ever gives.
+ *
+ * `requested: true` and nothing more, on purpose — not `{ sent: boolean }`, not
+ * an expiry, not a masked address. A registered email, an unregistered one, a
+ * Google-only account and a resend inside the cooldown all produce this exact
+ * body with this exact status, because any field that varied between them would
+ * tell an anonymous caller which addresses have accounts. Read it as "we have
+ * taken your request", never as "an email is on its way".
+ */
+export const ForgotPasswordRequestOtpResponseSchema = z.object({
+  requested: z.literal(true),
+});
+export type ForgotPasswordRequestOtpResponse = z.infer<
+  typeof ForgotPasswordRequestOtpResponseSchema
+>;
+
+/**
+ * `POST /api/auth/forgot-password/verify-otp` — step two: the code from the
+ * email, plus the password to set.
+ *
+ * One call rather than "verify, then reset with a ticket the verify handed back".
+ * A second round trip would need its own short-lived credential to carry proof of
+ * the code between the two calls — a second thing to issue, store, expire and get
+ * wrong — and the customer has already typed both fields into one form by then.
+ *
+ * `email` is here as well as in step one because the OTP is per address and this
+ * request stands alone; there is no session or cookie tying it to the request that
+ * sent the code.
+ */
+export const ForgotPasswordVerifyOtpRequestSchema = z.object({
+  email: EmailSchema,
+  otp: OtpCodeSchema,
+  /** The same rules a sign-up is held to (`RegisterRequestSchema`). */
+  newPassword: PasswordSchema,
+});
+export type ForgotPasswordVerifyOtpRequest = z.input<
+  typeof ForgotPasswordVerifyOtpRequestSchema
+>;
+export type ForgotPasswordVerifyOtpRequestParsed = z.output<
+  typeof ForgotPasswordVerifyOtpRequestSchema
+>;
+
+/**
+ * Nothing to return but "it worked" — specifically *not* an `AuthSession`.
+ *
+ * Signing the customer in off the back of a reset would be convenient and wrong:
+ * the strongest thing proven here is control of the mailbox, and D3 sessions are
+ * 30-day bearer tokens with no server-side revocation. Someone with a stolen
+ * mailbox would walk away holding a month-long session. They get sent to the
+ * sign-in screen to type the password they just chose instead.
+ */
+export const ForgotPasswordVerifyOtpResponseSchema = z.object({
+  reset: z.literal(true),
+});
+export type ForgotPasswordVerifyOtpResponse = z.infer<
+  typeof ForgotPasswordVerifyOtpResponseSchema
+>;
+
+/**
+ * What the RN reset form validates — step two's wire contract minus `email`,
+ * plus one field that never leaves the device.
+ *
+ * `email` is absent because the screen already holds it in local state from step
+ * one (the same two-steps-in-one-screen shape as
+ * `customer/bookings/[id]/upi.tsx`), so re-rendering it as an editable input
+ * would invite a customer to change it and wonder why their code stopped working.
+ *
+ * `confirmNewPassword` is a typo check, not a rule a server can enforce, exactly
+ * as in `ChangePasswordFormSchema` — only `newPassword` is posted.
+ */
+export const ForgotPasswordResetFormSchema = z
+  .object({
+    otp: OtpCodeSchema,
+    newPassword: PasswordSchema,
+    confirmNewPassword: z.string().min(1, 'Re-enter your new password'),
+  })
+  .refine((value) => value.confirmNewPassword === value.newPassword, {
+    path: ['confirmNewPassword'],
+    message: 'The two passwords do not match',
+  });
+export type ForgotPasswordResetForm = z.input<typeof ForgotPasswordResetFormSchema>;
+export type ForgotPasswordResetFormParsed = z.output<typeof ForgotPasswordResetFormSchema>;
 
 /* ───────────────────────────── Responses ───────────────────────────── */
 

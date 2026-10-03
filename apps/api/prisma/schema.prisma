@@ -102,6 +102,65 @@ model User {
   @@index([createdAt])
 }
 
+/// Phase 15 — a one-time 6-digit code emailed to a signed-out customer who is
+/// resetting their password (`POST /api/auth/forgot-password/request-otp`, then
+/// `.../verify-otp`). It replaces the "call the parking office" stub that shipped
+/// for Thursday.
+///
+/// Keyed by `email`, not by a `userId` relation, on purpose. `request-otp` has to
+/// answer identically whether or not the address belongs to an account — the same
+/// account-enumeration reasoning as `INVALID_CREDENTIALS_MESSAGE` in
+/// `lib/auth/errors.ts` — and the cleanest way to be sure the handler cannot
+/// accidentally branch on "is there a user" before it answers is for this table
+/// not to need one. Rows are still only ever written for a real account with a
+/// password; nothing here is reachable for an address that has none.
+///
+/// Deliberately single-purpose. There is no `purpose` discriminator and no
+/// `payload` blob, because registration takes no OTP at all — a sign-up logs the
+/// customer straight in (`POST /api/auth/register`, unchanged) — so a generic
+/// multi-purpose code table would be columns nothing ever writes.
+///
+/// `codeHash`, not the code: a readable 6-digit code in this table is a password
+/// reset for every pending customer to anyone who can run one SELECT.
+///
+/// The one place the file header's "nothing is hard-deleted" convention does not
+/// apply. A spent or superseded code is not business history that a receipt or a
+/// revenue report can read — it is dead credential material whose only remaining
+/// property is that keeping it is worse than not. So `requestPasswordResetOtp`
+/// clears this address's rows before writing a new one, which also means there is
+/// at most one live code per email at a time.
+model PasswordResetCode {
+  id String @id @default(cuid())
+
+  /// Lower-cased, the way `EmailSchema` normalises it and `User.email` stores it.
+  email String
+
+  /// bcrypt hash of the 6-digit code, via `lib/auth/password.ts` (cost 12) — the
+  /// same hashing the account's own password gets, rather than a second opinion
+  /// about hashing living in this codebase.
+  codeHash String
+
+  /// Wrong guesses so far. At `OTP_MAX_ATTEMPTS` (5) this code is locked and the
+  /// customer must request a new one. This counter is the only thing between a
+  /// 6-digit secret and an online brute force: 10 minutes of unlimited guessing
+  /// finds a million-space code easily.
+  attempts Int @default(0)
+
+  /// Set when the code was spent on a successful reset. A consumed code is never
+  /// accepted again, so one emailed code resets one password.
+  consumedAt DateTime?
+
+  /// `createdAt + OTP_TTL_MINUTES` (10).
+  expiresAt DateTime
+
+  createdAt DateTime @default(now())
+
+  /// The only lookup there is: the newest code for one address, which serves both
+  /// the 60-second resend cooldown and the verify step. Composite rather than
+  /// `@@index([email])` so the `ORDER BY createdAt DESC` is covered too.
+  @@index([email, createdAt])
+}
+
 // ═══════════════════════════════════════════════════════════════════════════
 //  VEHICLES  (§5)
 // ═══════════════════════════════════════════════════════════════════════════

@@ -47,10 +47,10 @@ import { TextField } from '@/components/text-field';
 import { ThemedText } from '@/components/themed-text';
 import { Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
-import { ApiError, apiRequest } from '@/lib/api';
+import { ApiError, apiRequest, apiUpload } from '@/lib/api';
 import { applyApiError } from '@/lib/form-errors';
 
-/** The local file state kept for preview; `onSubmit` reads `uri` into a `Blob`. */
+/** The local file state kept for preview; `onSubmit` uploads it via `apiUpload`. */
 type PickedScreenshot = { uri: string; name: string; type: string };
 
 export default function UpiPaymentScreen() {
@@ -144,27 +144,21 @@ export default function UpiPaymentScreen() {
     }
 
     try {
-      const form = new FormData();
-      if (values.utr) form.append('utr', values.utr);
-      // The `{ uri, name, type }` file descriptor RN's own FormData.d.ts
-      // documents is no longer accepted by this build's networking module
-      // (New Architecture / Bridgeless) — it throws "Unsupported FormDataPart
-      // implementation" before any request is sent, which apiRequest's catch
-      // block then reports as the misleading "Could not reach the server".
-      // Reading the local file into a real Blob first is the one shape every
-      // RN networking implementation (old bridge or new) knows how to
-      // serialize into a multipart part.
-      const screenshotBlob = await (await fetch(screenshot.uri)).blob();
-      form.append('screenshot', screenshotBlob, screenshot.name);
-
+      // `apiUpload` reads `screenshot.uri` and builds the multipart body in
+      // native code — see its comment in `lib/api.ts` for why this isn't
+      // `apiRequest` with a hand-built `FormData` (two different failure
+      // modes going through RN's own JS networking for this exact call).
+      //
       // A multi-MB photo on a weak or congested mobile connection (the exact
       // condition at a parking gate this app is built for) routinely takes
       // longer than the global 20s API timeout, which exists to catch an
       // unreachable server, not a slow-but-working upload. Give this one call
       // real headroom instead of failing a perfectly good upload mid-transfer.
-      await apiRequest<Booking>(`/api/bookings/${id}/utr`, {
-        method: 'POST',
-        body: form,
+      await apiUpload<Booking>(`/api/bookings/${id}/utr`, {
+        fileUri: screenshot.uri,
+        fieldName: 'screenshot',
+        mimeType: screenshot.type,
+        fields: values.utr ? { utr: values.utr } : undefined,
         timeoutMs: 90_000,
       });
       router.replace(`/customer/bookings/${id}`);

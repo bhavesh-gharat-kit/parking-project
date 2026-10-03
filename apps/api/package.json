@@ -21,6 +21,7 @@
     "verify:bookings": "tsx scripts/verify-bookings.ts"
   },
   "dependencies": {
+    "@getbrevo/brevo": "^5.0.4",
     "@parking/shared": "*",
     "@prisma/adapter-mariadb": "7.10.0",
     "@prisma/client": "7.10.0",

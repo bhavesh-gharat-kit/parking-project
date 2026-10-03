@@ -101,4 +101,19 @@ export const OptionalUpiVpaSchema = z.preprocess(
   UpiVpaSchema.optional(),
 );
 
+/**
+ * The 6-digit one-time code emailed for a password reset (Phase 15).
+ *
+ * Shape only, and deliberately not "the code is correct": the server compares a
+ * bcrypt hash and counts attempts (`apps/api/lib/auth/password-reset.ts`), so all
+ * this does is stop a blank or half-typed field becoming a wasted attempt against
+ * that counter. The whitespace strip is for the customer who pastes "123 456" out
+ * of the email.
+ */
+export const OtpCodeSchema = z
+  .string()
+  .trim()
+  .transform((value) => value.replace(/\s/g, ''))
+  .refine((value) => /^\d{6}$/.test(value), 'Enter the 6-digit code from your email');
+
 export const CuidSchema = z.string().min(1, 'Required');
