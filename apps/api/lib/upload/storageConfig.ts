@@ -8,6 +8,8 @@
  * down to the two providers this app needs — no s3, no multi-project map,
  * since there is exactly one upload use case here.
  */
+import path from 'node:path';
+
 import { env } from '@/lib/env';
 
 /** Base URL and endpoint of the hosted PHP upload service. */
@@ -28,9 +30,16 @@ export const MEDIAHOST_CONFIG = {
  * relative path: the RN app loads `utrScreenshotUrl` straight into an
  * `<Image>` `uri`, which — unlike a browser `<img src>` — cannot resolve a
  * relative URL against "the current page", so it must always be absolute.
+ *
+ * `baseDir` is anchored to this file's own location, not `process.cwd()` —
+ * the latter is wherever the Node process happened to be launched from
+ * (PM2's ecosystem `cwd`, a monorepo root, wherever), which is not
+ * guaranteed to be `apps/api` and silently writes files to a path nothing
+ * serves (confirmed in production: the upload reported success, but the
+ * returned URL 404'd — the write landed outside the served `public/`).
  */
 export const LOCAL_CONFIG = {
-  baseDir: `${process.cwd()}/public/uploads`,
+  baseDir: path.join(__dirname, '../../public/uploads'),
   baseFolder: 'uploads',
   baseUrl: env.AUTH_URL,
 };

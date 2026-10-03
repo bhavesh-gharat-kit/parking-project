@@ -351,7 +351,7 @@ export type BookingPayment = z.infer<typeof BookingPaymentSchema>;
  */
 export const BookingSchema = z.object({
   id: z.string(),
-  /** §17 — what the customer reads out at the gate, e.g. "KLY-260928-4F2B". */
+  /** §17 — what the customer reads out at the gate, e.g. "KLY-260928-0007". */
   bookingNumber: z.string(),
 
   status: BookingStatusSchema,

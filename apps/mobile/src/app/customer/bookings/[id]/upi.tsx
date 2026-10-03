@@ -50,7 +50,7 @@ import { useTheme } from '@/hooks/use-theme';
 import { ApiError, apiRequest } from '@/lib/api';
 import { applyApiError } from '@/lib/form-errors';
 
-/** What `apiRequest`'s `FormData` branch, and RN's own `FormData.append`, need. */
+/** The local file state kept for preview; `onSubmit` reads `uri` into a `Blob`. */
 type PickedScreenshot = { uri: string; name: string; type: string };
 
 export default function UpiPaymentScreen() {
@@ -146,11 +146,16 @@ export default function UpiPaymentScreen() {
     try {
       const form = new FormData();
       if (values.utr) form.append('utr', values.utr);
-      // RN's FormData.append accepts a `{ uri, name, type }` file descriptor at
-      // runtime (see react-native's own FormData.d.ts) — TS resolves to the DOM
-      // lib's `Blob`-only overload instead because `expo/tsconfig.base` includes
-      // `"DOM"` in `lib`, so this cast is for the type checker, not the runtime.
-      form.append('screenshot', screenshot as unknown as Blob);
+      // The `{ uri, name, type }` file descriptor RN's own FormData.d.ts
+      // documents is no longer accepted by this build's networking module
+      // (New Architecture / Bridgeless) — it throws "Unsupported FormDataPart
+      // implementation" before any request is sent, which apiRequest's catch
+      // block then reports as the misleading "Could not reach the server".
+      // Reading the local file into a real Blob first is the one shape every
+      // RN networking implementation (old bridge or new) knows how to
+      // serialize into a multipart part.
+      const screenshotBlob = await (await fetch(screenshot.uri)).blob();
+      form.append('screenshot', screenshotBlob, screenshot.name);
 
       // A multi-MB photo on a weak or congested mobile connection (the exact
       // condition at a parking gate this app is built for) routinely takes

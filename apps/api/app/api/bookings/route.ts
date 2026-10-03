@@ -54,11 +54,6 @@ const CREATE_FAILURES = {
     field: 'rateId',
     message: 'That package is priced for a different vehicle type. Please choose again.',
   },
-  NUMBER_COLLISION: {
-    code: 'INTERNAL_ERROR',
-    field: null,
-    message: 'Could not create your booking just now. Please try again.',
-  },
 } as const;
 
 export async function GET(req: NextRequest) {

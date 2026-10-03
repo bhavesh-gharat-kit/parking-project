@@ -56,7 +56,12 @@ export const VehicleNumberSchema = z
   .transform((value) => value.replace(/[\s-]/g, ''))
   .refine((value) => /^[A-Z0-9]{4,14}$/.test(value), 'Enter a valid vehicle number');
 
-/** Human-readable booking code, e.g. "KLY-260928-4F2B" (Phase 05 generates it). */
+/**
+ * Human-readable booking code, e.g. "KLY-260928-0007" (branch-date-sequence,
+ * `apps/api/lib/bookings/booking-number.ts`). The last segment accepts any
+ * 4-character `[A-Z0-9]` value rather than `\d{4}` specifically so this schema
+ * doesn't need to change if that generator's format ever does again.
+ */
 export const BookingNumberSchema = z
   .string()
   .trim()

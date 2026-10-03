@@ -33,25 +33,16 @@
  * double-booked, which is also why expiry (§15) has nothing to release beyond
  * the booking's own state.
  */
+import { istDateStamp } from '@parking/shared';
 import type { BookingCreateRequest } from '@parking/shared';
 
 import { prisma } from '@/lib/db';
 import { getBookingExpiryMinutes } from '@/lib/settings';
-import { buildBookingNumber } from './booking-number';
+import { nextBookingSequence } from './booking-sequence';
+import { formatBookingNumber } from './booking-number';
 import { BOOKING_RELATIONS, type BookingWithRelations } from './projection';
 
 const MS_PER_MINUTE = 60_000;
-
-/** Prisma's unique-constraint code — here, a booking-number collision. */
-const UNIQUE_VIOLATION = 'P2002';
-
-/**
- * Attempts at a unique booking number before giving up. The suffix is 4
- * characters from a 32-character alphabet, scoped to one branch and one day, so
- * five collisions in a row is not bad luck — it is a bug or an exhausted
- * keyspace, and failing loudly beats looping at a parking gate.
- */
-const BOOKING_NUMBER_ATTEMPTS = 5;
 
 export type CreateBookingInput = BookingCreateRequest & { userId: string };
 
@@ -60,12 +51,7 @@ export type CreateBookingResult =
   | {
       ok: false;
       /** Which id the customer has to change. Maps to a field error in the app. */
-      reason:
-        | 'VEHICLE_NOT_FOUND'
-        | 'LOCATION_NOT_FOUND'
-        | 'RATE_NOT_FOUND'
-        | 'RATE_VEHICLE_MISMATCH'
-        | 'NUMBER_COLLISION';
+      reason: 'VEHICLE_NOT_FOUND' | 'LOCATION_NOT_FOUND' | 'RATE_NOT_FOUND' | 'RATE_VEHICLE_MISMATCH';
     };
 
 export async function createBooking(input: CreateBookingInput): Promise<CreateBookingResult> {
@@ -105,68 +91,56 @@ export async function createBooking(input: CreateBookingInput): Promise<CreateBo
   const expiryMinutes = await getBookingExpiryMinutes();
   const expiresAt = new Date(startTime.getTime() + expiryMinutes * MS_PER_MINUTE);
 
-  for (let attempt = 1; attempt <= BOOKING_NUMBER_ATTEMPTS; attempt += 1) {
-    try {
-      const booking = await prisma.booking.create({
-        data: {
-          bookingNumber: buildBookingNumber(location.code, startTime),
+  // The sequence increment and the booking insert share one transaction (see
+  // `booking-sequence.ts`): if anything below fails, the counter rolls back
+  // too, so a failed attempt never burns a number out of the day's sequence.
+  const booking = await prisma.$transaction(async (tx) => {
+    const dateStamp = istDateStamp(startTime);
+    const sequence = await nextBookingSequence(tx, location.id, dateStamp);
+    const bookingNumber = formatBookingNumber(location.code, startTime, sequence);
 
-          userId,
-          locationId: location.id,
-          vehicleId: vehicle.id,
-          rateId: rate.id,
+    return tx.booking.create({
+      data: {
+        bookingNumber,
 
-          // ── snapshot (schema.prisma) ──
-          vehicleNumber: vehicle.number,
-          vehicleType: vehicle.type,
-          rateLabel: rate.label,
-          durationMinutes: rate.durationMinutes,
-          amountInPaise: rate.priceInPaise,
+        userId,
+        locationId: location.id,
+        vehicleId: vehicle.id,
+        rateId: rate.id,
 
-          startTime,
-          endTime,
+        // ── snapshot (schema.prisma) ──
+        vehicleNumber: vehicle.number,
+        vehicleType: vehicle.type,
+        rateLabel: rate.label,
+        durationMinutes: rate.durationMinutes,
+        amountInPaise: rate.priceInPaise,
 
-          // §14 — created in PENDING. The payment method, and the status that
-          // follows from it (PENDING_PAYMENT for UPI, PENDING_APPROVAL for cash),
-          // are Phase 06's to set through `transitionBooking`.
-          status: 'PENDING',
-          paymentMethod: null,
-          expiresAt,
+        startTime,
+        endTime,
 
-          // §21 — the audit trail starts at creation, so every booking's history
-          // is complete from its first state rather than from its second. Nested
-          // so it shares the insert's transaction.
-          statusEvents: {
-            create: {
-              fromStatus: null,
-              toStatus: 'PENDING',
-              actorId: userId,
-              actorRole: 'USER',
-              note: 'Booking created',
-            },
+        // §14 — created in PENDING. The payment method, and the status that
+        // follows from it (PENDING_PAYMENT for UPI, PENDING_APPROVAL for cash),
+        // are Phase 06's to set through `transitionBooking`.
+        status: 'PENDING',
+        paymentMethod: null,
+        expiresAt,
+
+        // §21 — the audit trail starts at creation, so every booking's history
+        // is complete from its first state rather than from its second. Nested
+        // so it shares the insert's transaction.
+        statusEvents: {
+          create: {
+            fromStatus: null,
+            toStatus: 'PENDING',
+            actorId: userId,
+            actorRole: 'USER',
+            note: 'Booking created',
           },
         },
-        include: BOOKING_RELATIONS,
-      });
+      },
+      include: BOOKING_RELATIONS,
+    });
+  });
 
-      return { ok: true, booking };
-    } catch (error) {
-      const collision =
-        typeof error === 'object' &&
-        error !== null &&
-        'code' in error &&
-        (error as { code?: unknown }).code === UNIQUE_VIOLATION;
-
-      if (!collision) throw error;
-      if (attempt === BOOKING_NUMBER_ATTEMPTS) {
-        console.error(
-          `[bookings] could not generate a unique booking number for ${location.code} after ${BOOKING_NUMBER_ATTEMPTS} attempts.`,
-        );
-        return { ok: false, reason: 'NUMBER_COLLISION' };
-      }
-    }
-  }
-
-  // Unreachable: the loop either returns or throws.
-  return { ok: false, reason: 'NUMBER_COLLISION' };
+  return { ok: true, booking };
 }
