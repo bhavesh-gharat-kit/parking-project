@@ -4,6 +4,9 @@ import { signOut } from 'next-auth/react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
+import { promptPwaInstall } from '../_lib/pwa-install';
+import { usePwaInstall } from '../_lib/use-pwa-install';
+
 type NavLink = { href: string; label: string };
 
 const CUSTOMER_LINKS: NavLink[] = [
@@ -32,6 +35,14 @@ export function NavBar({ variant, userEmail }: NavBarProps) {
   const pathname = usePathname();
   const links = variant === 'customer' ? CUSTOMER_LINKS : ADMIN_LINKS;
   const brandHref = variant === 'customer' ? '/web/customer' : '/web/admin';
+
+  // `InstallBanner` (mounted globally in app/web/layout.tsx) already captures
+  // `beforeinstallprompt` and auto-prompts once; this button reads the same
+  // module-level state so install is still reachable from any page after
+  // that banner has been dismissed. Hidden once installed, or if no prompt
+  // has been captured (nothing to trigger yet, or iOS Safari, which never
+  // fires one at all).
+  const { installable, installed } = usePwaInstall();
 
   return (
     <nav className="web-nav">
@@ -63,6 +74,11 @@ export function NavBar({ variant, userEmail }: NavBarProps) {
 
         <div className="web-nav-user">
           <span>{userEmail}</span>
+          {installable && !installed ? (
+            <button type="button" className="btn btn-secondary" onClick={() => void promptPwaInstall()}>
+              Install app
+            </button>
+          ) : null}
           <button
             type="button"
             className="btn btn-ghost"
