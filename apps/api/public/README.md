@@ -8,3 +8,9 @@ Static files Next.js serves straight from the site root.
   `.gitignore`) — a multi-ten-MB binary doesn't belong in version control, and
   it changes every release; copy the new one onto the VPS each time instead
   (`scp` it into this directory, or `wget` the EAS URL directly on the VPS).
+- `uploads/` — UTR payment screenshots, written here by
+  `lib/upload/localProvider.ts` only when `STORAGE_PROVIDER=local`. Not
+  committed (see `.gitignore`) — these are user uploads, not source. On the
+  VPS, back this directory up or mount it on persistent storage if you rely
+  on `local` rather than `mediahost`: a plain `git pull` / `pm2 reload`
+  leaves it alone, but redeploying onto a fresh checkout would not.

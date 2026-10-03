@@ -22,3 +22,8 @@ next-env.d.ts
 # The sideloaded APK /download-apk serves (see public/README.md) — a large
 # binary that changes every release, not something to version-control.
 public/*.apk
+
+# UTR screenshots written by lib/upload/localProvider.ts when
+# STORAGE_PROVIDER=local (see public/README.md) — user-uploaded, not source.
+public/uploads/*
+!public/uploads/.gitkeep

@@ -58,6 +58,17 @@ const EnvSchema = z.object({
   EXPO_ACCESS_TOKEN: z.string().optional(),
 
   ALLOWED_WEB_ORIGINS: z.string().default(''),
+
+  // ── Phase 15 (UTR screenshot upload) ──
+  /**
+   * Which provider `lib/upload` writes files to. `local` needs no further
+   * config — it writes under `apps/api/public/uploads` and serves them from
+   * this API's own origin (`AUTH_URL`). `mediahost` needs
+   * MEDIAHOST_PROJECT_NAME / MEDIAHOST_TOKEN (read directly in
+   * `lib/upload/storageConfig.ts`, not here, since they're optional only
+   * for that one provider).
+   */
+  STORAGE_PROVIDER: z.enum(['local', 'mediahost']).default('mediahost'),
 });
 
 const parsed = EnvSchema.safeParse(process.env);

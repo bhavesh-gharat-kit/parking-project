@@ -24,7 +24,7 @@
  * faster.
  *
  * Because the screenshot is now the one required piece of evidence, a failed
- * upload (bad connection at the gate, media-host outage) is no longer
+ * upload (bad connection at the gate, storage provider outage) is no longer
  * swallowed — unlike before Phase 15, it now fails the request with
  * `SERVICE_UNAVAILABLE` so the customer knows to retry, rather than silently
  * landing the booking in `PAYMENT_VERIFICATION` with no evidence attached.
@@ -38,7 +38,7 @@ import { toBooking } from '@/lib/bookings/projection';
 import { transitionBooking, transitionFailureMessage } from '@/lib/bookings/transitions';
 import { prisma } from '@/lib/db';
 import { fail, failValidation, ok } from '@/lib/http';
-import { mediaHostUpload } from '@/lib/upload/mediaHostProvider';
+import { uploadFile } from '@/lib/upload';
 import { UTR_SCREENSHOT_RULES } from '@/lib/upload/storageConfig';
 
 export const runtime = 'nodejs';
@@ -100,7 +100,7 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
     const buffer = Buffer.from(await file.arrayBuffer());
     const extension = file.name.split('.').pop() || 'jpg';
     const filename = `${owned.id}-${Date.now()}.${extension}`;
-    const result = await mediaHostUpload({ buffer, mimetype: file.type }, filename, 'utr-screenshots');
+    const result = await uploadFile({ buffer, mimetype: file.type }, filename, 'utr-screenshots');
     screenshotUrl = result.url;
   } catch (error) {
     console.error('[bookings/utr] screenshot upload failed:', error);
