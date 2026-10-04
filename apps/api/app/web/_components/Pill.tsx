@@ -1,6 +1,8 @@
 import {
   BOOKING_STATUS_LABELS,
+  PASS_BOOKING_STATUS_LABELS,
   type BookingStatus,
+  type PassBookingStatus,
   type PaymentStatus,
   PAYMENT_STATUS_LABELS,
 } from '@parking/shared';
@@ -44,4 +46,20 @@ const PAYMENT_STATUS_TONE: Record<PaymentStatus, Tone> = {
 
 export function PaymentStatusPill({ status, large }: { status: PaymentStatus; large?: boolean }) {
   return <Pill label={PAYMENT_STATUS_LABELS[status]} tone={PAYMENT_STATUS_TONE[status]} large={large} />;
+}
+
+const PASS_BOOKING_STATUS_TONE: Record<PassBookingStatus, Tone> = {
+  PENDING: 'waiting',
+  PENDING_PAYMENT: 'waiting',
+  PAYMENT_VERIFICATION: 'waiting',
+  PENDING_APPROVAL: 'waiting',
+  CONFIRMED: 'done',
+  REJECTED: 'bad',
+  CANCELLED: 'bad',
+};
+
+export function PassStatusPill({ status, large }: { status: PassBookingStatus; large?: boolean }) {
+  return (
+    <Pill label={PASS_BOOKING_STATUS_LABELS[status]} tone={PASS_BOOKING_STATUS_TONE[status]} large={large} />
+  );
 }

@@ -25,6 +25,9 @@ export const SETTING_KEYS = {
   upiVpa: 'payment.upi.vpa',
   upiPayeeName: 'payment.upi.payeeName',
   bookingExpiryMinutes: 'booking.expiryMinutes',
+  /** D5 point 9 — how long an unpaid pass application is held before the
+   *  expiry sweep cancels it. Same mechanism as `bookingExpiryMinutes`. */
+  passExpiryMinutes: 'pass.expiryMinutes',
 } as const;
 
 export type SettingKey = (typeof SETTING_KEYS)[keyof typeof SETTING_KEYS];
@@ -57,6 +60,36 @@ export async function getBookingExpiryMinutes(): Promise<number> {
         ` Falling back to BOOKING_EXPIRY_MINUTES=${env.BOOKING_EXPIRY_MINUTES}.`,
     );
     return env.BOOKING_EXPIRY_MINUTES;
+  }
+
+  return parsed;
+}
+
+/**
+ * D5 point 9 — how many minutes an unpaid pass application is held before the
+ * sweep (`app/api/cron/expire-passes`) cancels it.
+ * `AppSetting['pass.expiryMinutes']`, else `DEFAULT_PASS_EXPIRY_MINUTES`.
+ *
+ * Unlike `getBookingExpiryMinutes` there is no `.env` fallback constant for
+ * this one — a pass application has no live-at-the-gate urgency the way a
+ * daily booking does, so there is nothing here a deploy-time `.env` value
+ * would need to override on day one; the admin can set it from the moment
+ * the setting exists.
+ */
+const DEFAULT_PASS_EXPIRY_MINUTES = 30;
+
+export async function getPassExpiryMinutes(): Promise<number> {
+  const raw = await readSetting(SETTING_KEYS.passExpiryMinutes);
+  if (raw === null) return DEFAULT_PASS_EXPIRY_MINUTES;
+
+  const parsed = Number(raw);
+  if (!Number.isInteger(parsed) || parsed <= 0 || parsed > MAX_EXPIRY_MINUTES) {
+    console.warn(
+      `[settings] ignoring AppSetting["${SETTING_KEYS.passExpiryMinutes}"] = ${JSON.stringify(raw)}` +
+        ` — expected a whole number of minutes between 1 and ${MAX_EXPIRY_MINUTES}.` +
+        ` Falling back to ${DEFAULT_PASS_EXPIRY_MINUTES}.`,
+    );
+    return DEFAULT_PASS_EXPIRY_MINUTES;
   }
 
   return parsed;

@@ -33,6 +33,10 @@ const DEFAULT_SETTINGS: Record<string, string> = {
   'payment.upi.vpa': '',
   'payment.upi.payeeName': '',
   'booking.expiryMinutes': '10',
+  // D5 point 9 (Phase 20) — how long an unpaid pass application is held
+  // before the expiry sweep cancels it. Separate from the booking window
+  // above: a pass application has no live-at-the-gate urgency.
+  'pass.expiryMinutes': '30',
 };
 
 const KALYAN_LOCATION = {

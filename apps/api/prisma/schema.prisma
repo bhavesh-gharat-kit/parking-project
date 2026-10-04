@@ -781,6 +781,18 @@ model PassBooking {
   /// NULL until the customer picks UPI or cash (Phase 20).
   paymentMethod PaymentMethod?
 
+  /// D5 point 9 — `createdAt + pass.expiryMinutes` for as long as the
+  /// application is still the customer's to finish. Phase 20's sweep
+  /// (`app/api/cron/expire-passes`) looks for rows where this has passed
+  /// while `status` is still `SWEEPABLE_PASS_BOOKING_STATUSES` (`PENDING` or
+  /// `PENDING_PAYMENT`), exactly the `Booking.expiresAt` pattern — including
+  /// freezing the window in force at creation, so shortening the setting
+  /// later never retroactively expires an older application.
+  /// `lib/passes/transitions.ts` clears it once the application leaves those
+  /// statuses. Per D5 point 3 this has no interaction with `startDate`/
+  /// `endDate` above, which are already fixed by then.
+  expiresAt DateTime?
+
   /// D5 point 8 — which admin approved/rejected/edited this, and why. Kept on
   /// the booking (not only in `statusEvents`) so the admin list can show it
   /// without a join, same as `Booking.reviewedById`.
@@ -810,6 +822,8 @@ model PassBooking {
   @@index([userId, createdAt])
   /// The admin's pending-work queue.
   @@index([status, createdAt])
+  /// Phase 20's expiry sweep.
+  @@index([status, expiresAt])
   /// Dashboard/reports, grouped by branch.
   @@index([locationId, createdAt])
 }
@@ -877,8 +891,11 @@ model PassStatusEvent {
   id            String @id @default(cuid())
   passBookingId String
 
+  /// Both NULL together means this row is a plain field edit (Phase 21, D5
+  /// point 8), not a status transition — `changedFields` below carries what
+  /// actually happened instead. A real transition always sets `toStatus`.
   fromStatus PassBookingStatus?
-  toStatus   PassBookingStatus
+  toStatus   PassBookingStatus?
 
   /// NULL when the actor was the system (no sweep exists for passes today,
   /// per D5 point 9 — reserved for parity with `BookingStatusEvent`).

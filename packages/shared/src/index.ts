@@ -13,3 +13,4 @@ export * from './admin';
 export * from './dashboard';
 export * from './receipts';
 export * from './push';
+export * from './passes';
