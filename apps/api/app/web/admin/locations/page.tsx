@@ -52,6 +52,9 @@ export default function AdminLocationsPage() {
               <Link href={`/web/admin/locations/${location.id}/rates`} className="btn btn-secondary">
                 Rates
               </Link>
+              <Link href={`/web/admin/locations/${location.id}/passes`} className="btn btn-secondary">
+                Passes
+              </Link>
               <Link href={`/web/admin/locations/${location.id}`} className="btn btn-ghost">
                 Edit
               </Link>

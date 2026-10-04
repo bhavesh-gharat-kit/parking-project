@@ -62,6 +62,30 @@ const KALYAN_RATES: { vehicleType: 'BIKE' | 'CAR'; durationMinutes: number; pric
   { vehicleType: 'CAR', durationMinutes: 1440, priceInPaise: 10000 },
 ];
 
+/**
+ * Starter `PassPlan` rows (`_/decisions.md` D5, Phase 19) — a representative
+ * subset of the Weekly/15-Day/Monthly/3-Month × Bike/Car × Day/Night/Both
+ * matrix, not the full cross-product, so Phase 20 has real data to build
+ * against. Admin-editable from the moment the pass-plans screen exists.
+ */
+const KALYAN_PASS_PLANS: {
+  vehicleType: 'BIKE' | 'CAR';
+  shiftType: 'DAY' | 'NIGHT' | 'BOTH';
+  label: string;
+  validityMonths: number;
+  priceInPaise: number;
+  sortOrder: number;
+}[] = [
+  { vehicleType: 'BIKE', shiftType: 'DAY', label: 'Weekly', validityMonths: 1, priceInPaise: 15000, sortOrder: 0 },
+  { vehicleType: 'BIKE', shiftType: 'DAY', label: 'Monthly', validityMonths: 1, priceInPaise: 40000, sortOrder: 1 },
+  { vehicleType: 'BIKE', shiftType: 'DAY', label: '3-Month', validityMonths: 3, priceInPaise: 100000, sortOrder: 2 },
+  { vehicleType: 'BIKE', shiftType: 'BOTH', label: 'Monthly', validityMonths: 1, priceInPaise: 60000, sortOrder: 3 },
+  { vehicleType: 'CAR', shiftType: 'DAY', label: 'Weekly', validityMonths: 1, priceInPaise: 30000, sortOrder: 0 },
+  { vehicleType: 'CAR', shiftType: 'DAY', label: 'Monthly', validityMonths: 1, priceInPaise: 80000, sortOrder: 1 },
+  { vehicleType: 'CAR', shiftType: 'DAY', label: '3-Month', validityMonths: 3, priceInPaise: 200000, sortOrder: 2 },
+  { vehicleType: 'CAR', shiftType: 'BOTH', label: 'Monthly', validityMonths: 1, priceInPaise: 120000, sortOrder: 3 },
+];
+
 async function main() {
   const databaseUrl = process.env.DATABASE_URL;
   if (!databaseUrl) throw new Error('DATABASE_URL is not set.');
@@ -112,6 +136,32 @@ async function main() {
       rateCount += 1;
     }
     console.log(`Rates ready: ${rateCount} for ${location.name}.`);
+
+    let passPlanCount = 0;
+    for (const plan of KALYAN_PASS_PLANS) {
+      await prisma.passPlan.upsert({
+        where: {
+          locationId_vehicleType_shiftType_label: {
+            locationId: location.id,
+            vehicleType: plan.vehicleType,
+            shiftType: plan.shiftType,
+            label: plan.label,
+          },
+        },
+        update: {},
+        create: {
+          locationId: location.id,
+          vehicleType: plan.vehicleType,
+          shiftType: plan.shiftType,
+          label: plan.label,
+          validityMonths: plan.validityMonths,
+          priceInPaise: plan.priceInPaise,
+          sortOrder: plan.sortOrder,
+        },
+      });
+      passPlanCount += 1;
+    }
+    console.log(`Pass plans ready: ${passPlanCount} for ${location.name}.`);
   } finally {
     await prisma.$disconnect();
   }

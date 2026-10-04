@@ -94,9 +94,16 @@ model User {
   pushTokens PushToken[]
 
   /// Bookings/payments this user acted on as an admin (§21).
-  reviewedBookings Booking[]             @relation("BookingReviewedBy")
-  verifiedPayments Payment[]             @relation("PaymentVerifiedBy")
-  bookingEvents    BookingStatusEvent[]  @relation("BookingEventActor")
+  reviewedBookings Booking[]            @relation("BookingReviewedBy")
+  verifiedPayments Payment[]            @relation("PaymentVerifiedBy")
+  bookingEvents    BookingStatusEvent[] @relation("BookingEventActor")
+
+  /// Who applied for a pass, and passes/payments this user acted on as an
+  /// admin (D5, Phase 19).
+  passBookings         PassBooking[]
+  reviewedPassBookings PassBooking[]     @relation("PassBookingReviewedBy")
+  verifiedPassPayments PassPayment[]     @relation("PassPaymentVerifiedBy")
+  passBookingEvents    PassStatusEvent[] @relation("PassBookingEventActor")
 
   @@index([role, isActive])
   @@index([createdAt])
@@ -253,6 +260,10 @@ model ParkingLocation {
 
   rates    ParkingRate[]
   bookings Booking[]
+
+  /// D5, Phase 19 — the pass pricing matrix and passes sold at this branch.
+  passPlans    PassPlan[]
+  passBookings PassBooking[]
 
   @@index([isActive])
   @@index([city])
@@ -498,15 +509,15 @@ model Payment {
   /// for the admin to check against the bank statement — entering it must never
   /// move `status` to `PAID`. Indexed, not unique: a duplicate UTR is a
   /// fraud signal for the admin to judge, not a database error at submit time.
-  upiUtr         String?   @db.VarChar(32)
-  utrSubmittedAt DateTime?
+  upiUtr           String?   @db.VarChar(32)
+  utrSubmittedAt   DateTime?
   /// Which VPA the customer was shown, in case the branch's UPI ID changes later.
-  upiPayeeVpa    String?   @db.VarChar(120)
+  upiPayeeVpa      String?   @db.VarChar(120)
   /// Payment-app screenshot the customer attached alongside the UTR, uploaded to
   /// media-host. Optional (§278-336, Phase 15) — supporting evidence for the
   /// admin, never a replacement for manual verification against the bank
   /// statement.
-  utrScreenshotUrl String? @db.Text
+  utrScreenshotUrl String?   @db.Text
 
   // ── Cash-at-parking path (§12) ─────────────────────────────────────────
   /// When the admin physically took the cash.
@@ -581,6 +592,313 @@ model BookingStatusEvent {
   actor   User?   @relation("BookingEventActor", fields: [actorId], references: [id], onDelete: SetNull)
 
   @@index([bookingId, createdAt])
+  @@index([createdAt])
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  PARKING PASSES  (D5 — Phases 19-22)
+//
+//  A second, parallel booking type sold alongside the daily `Booking` above —
+//  a monthly/weekly pass rather than a single parking session. Reuses the
+//  account system and the UPI-QR/cash + UTR/screenshot payment pattern (§11,
+//  §12, §32), but is new tables end to end: nothing here changes `Booking`/
+//  `Payment`.
+//
+//  D5 point 3 is the one rule worth restating at the top: `PassBooking.
+//  startDate`/`endDate` are computed ONCE, at submission (Phase 20), and
+//  never recomputed. "Active" vs "Expired" is a read-time comparison against
+//  `endDate` — there is deliberately no `EXPIRED`/`COMPLETED` value in
+//  `PassBookingStatus` for this reason. Phase 19 only adds the schema and the
+//  admin's `PassPlan` pricing screen — nothing below is customer-reachable yet.
+// ═══════════════════════════════════════════════════════════════════════════
+
+/// D5 point 2 — which half of the day (or both) a `PassPlan`'s price applies to.
+enum ShiftType {
+  DAY
+  NIGHT
+  BOTH
+}
+
+/// D5 point 4 — purely which icon/box gets ticked on the printed pass (Phase
+/// 22). Customer-selected, cosmetic only: never affects `PassPlan` lookup or
+/// price.
+enum PassVehicleCategory {
+  BULLET
+  AVENGER
+  SCOOTY
+  SPORTS
+  CAR
+  RICKSHAW
+  OTHER
+}
+
+/// D5 point 6 — the admin's own classification of the pass holder (वर्गीकरण
+/// on the paper form). Never customer-selected, never customer-visible as an
+/// input.
+enum PassSpecification {
+  SPECIAL
+  GENERAL
+  ODD
+}
+
+/// D5 point 6 — which side of the lot the pass holder parks in. Admin-only,
+/// set at approval time.
+enum PassEntrySide {
+  ST_STAND
+  COURT_SIDE
+}
+
+/// D5 point 3 — deliberately NO `EXPIRED`/`COMPLETED` value: active vs.
+/// expired is always derived by comparing `PassBooking.endDate` against today,
+/// never a stored transition.
+enum PassBookingStatus {
+  PENDING
+  PENDING_PAYMENT
+  PAYMENT_VERIFICATION
+  PENDING_APPROVAL
+  CONFIRMED
+  REJECTED
+  CANCELLED
+}
+
+/// D5 point 2 — the pass pricing matrix. One row is one thing a customer can
+/// buy: "Kalyan · Bike · Day · Monthly · ₹500". Same role as `ParkingRate` for
+/// daily bookings, and the only place a pass price comes from (§32): the
+/// customer never sends an amount, and the admin can edit a price here
+/// without an app/website release.
+model PassPlan {
+  id         String @id @default(cuid())
+  locationId String
+
+  /// D5 point 2 — pricing never varies on the cosmetic `vehicleCategory` on
+  /// `PassBooking`, only on this.
+  vehicleType VehicleType
+  shiftType   ShiftType
+
+  /// Admin-set price-tier name — "Weekly", "15-Day", "Monthly", "3-Month", or
+  /// anything else. A price-tier label, not an enforced day count.
+  label String @db.VarChar(40)
+
+  /// D5 point 3 — 1 for a tier that runs to the end of the purchase month, 3
+  /// for a quarter-style tier, etc. Feeds `PassBooking.startDate`/`endDate` at
+  /// submission (Phase 20).
+  validityMonths Int
+
+  /// Integer paise. ₹500 → 50000.
+  priceInPaise Int
+
+  /// Display order in the customer's plan list (Phase 20).
+  sortOrder Int @default(0)
+
+  /// Retiring a plan sets this false. Never delete: a deactivated plan simply
+  /// disappears from the customer list query — any `PassBooking` already
+  /// referencing it (snapshot columns below) is unaffected either way.
+  isActive Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  location     ParkingLocation @relation(fields: [locationId], references: [id], onDelete: Restrict)
+  passBookings PassBooking[]
+
+  /// One price per (branch, vehicle type, shift, label) — otherwise two
+  /// "Monthly" rows for the same branch/vehicle/shift would be ambiguous.
+  @@unique([locationId, vehicleType, shiftType, label])
+  @@index([locationId, vehicleType, isActive])
+}
+
+/// D5 — one row per pass application. `userId` is who applied, kept only for
+/// "my passes" lookups (D5 point 1) — never the source of the vehicle/contact
+/// fields below, which are free text typed fresh on the form, not pulled from
+/// or synced back to `Vehicle`/`User.phone`.
+model PassBooking {
+  id String @id @default(cuid())
+
+  /// Mirrors `Booking.bookingNumber` — "KLY-PASS-2610-0007": branch code,
+  /// YYMM, then a 4-digit counter from `PassMonthlySequence`, resetting each
+  /// calendar month per location. Generated by Phase 20 the same way
+  /// (`lib/bookings/booking-number.ts`'s pattern), never shown as the raw cuid.
+  passNumber String @unique @db.VarChar(28)
+
+  userId     String
+  locationId String
+  passPlanId String
+
+  // ─────────────────────────────────────────────────────────────────────────
+  //  SNAPSHOT — values copied from `PassPlan` at creation time, never re-read
+  //  from the live row. Same reasoning as `Booking`'s snapshot block: plans
+  //  are mutable by design (D5 point 2), so a pass that joined out to the
+  //  live `PassPlan` would silently rewrite its own history the moment the
+  //  admin edits a price or retires the tier.
+  // ─────────────────────────────────────────────────────────────────────────
+  planLabel      String      @db.VarChar(40)
+  vehicleType    VehicleType
+  shiftType      ShiftType
+  validityMonths Int
+  amountInPaise  Int
+
+  // ─────────────────────────────────────────────────────────────────────────
+  //  APPLICATION — free text per D5 point 1. Deliberately NOT validated
+  //  against, or written back to, `Vehicle`/`User.phone`/`User` address.
+  // ─────────────────────────────────────────────────────────────────────────
+  vehicleNumber String @db.VarChar(10)
+  mobileNumber  String @db.VarChar(10)
+  address       String @db.Text
+
+  /// D5 point 4 — cosmetic only; never read by pricing/validity logic.
+  vehicleCategory PassVehicleCategory
+
+  // ─────────────────────────────────────────────────────────────────────────
+  //  INFORMATIONAL (D5 point 5) — customer-entered, admin-editable, never read
+  //  by any pricing, validity, or eligibility logic.
+  // ─────────────────────────────────────────────────────────────────────────
+  occupationCategory String?
+  holidayOffDay      String?
+  helmet             Boolean @default(false)
+  locker             Boolean @default(false)
+  airCheck           Boolean @default(false)
+  rickshawParking    Boolean @default(false)
+  renewalReference   String?
+
+  // ─────────────────────────────────────────────────────────────────────────
+  //  ADMIN-ONLY (D5 point 6) — nullable: unset until an admin sets them at
+  //  approval time. The customer form never offers an input for either.
+  // ─────────────────────────────────────────────────────────────────────────
+  specification PassSpecification?
+  entrySide     PassEntrySide?
+
+  /// D5 point 3 — computed ONCE at submission (Phase 20, via
+  /// `packages/shared/src/datetime.ts`'s IST helpers — never a raw UTC
+  /// `new Date()`, and never mixed with MySQL's own `NOW()`, which is IST, not
+  /// UTC, on this project's DB), never recomputed on confirm/approve. An admin
+  /// may hand-edit these after issue (D5 point 8); that manual value is simply
+  /// what "active vs. expired" compares against from then on.
+  startDate DateTime
+  endDate   DateTime
+
+  status PassBookingStatus @default(PENDING)
+
+  /// NULL until the customer picks UPI or cash (Phase 20).
+  paymentMethod PaymentMethod?
+
+  /// D5 point 8 — which admin approved/rejected/edited this, and why. Kept on
+  /// the booking (not only in `statusEvents`) so the admin list can show it
+  /// without a join, same as `Booking.reviewedById`.
+  reviewedById String?
+  reviewedAt   DateTime?
+  reviewNote   String?   @db.Text
+
+  confirmedAt DateTime?
+  rejectedAt  DateTime?
+  cancelledAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user       User            @relation(fields: [userId], references: [id], onDelete: Restrict)
+  location   ParkingLocation @relation(fields: [locationId], references: [id], onDelete: Restrict)
+  passPlan   PassPlan        @relation(fields: [passPlanId], references: [id], onDelete: Restrict)
+  reviewedBy User?           @relation("PassBookingReviewedBy", fields: [reviewedById], references: [id], onDelete: SetNull)
+
+  /// One payment per pass application, same reasoning as `Booking.payment`.
+  payment PassPayment?
+
+  /// Append-only audit trail (D5 point 8).
+  statusEvents PassStatusEvent[]
+
+  /// The customer's own "my passes" list, newest first (D5 point 1).
+  @@index([userId, createdAt])
+  /// The admin's pending-work queue.
+  @@index([status, createdAt])
+  /// Dashboard/reports, grouped by branch.
+  @@index([locationId, createdAt])
+}
+
+/// The atomic per-(location, month) counter backing `PassBooking.passNumber`,
+/// the same race-free idiom as `BookingDailySequence` but keyed by calendar
+/// month instead of day — a pass is sold per month, not per day (D5).
+/// `yearMonth` matches the YYMM already embedded in the pass number it
+/// numbers, e.g. `"2610"`.
+model PassMonthlySequence {
+  locationId String
+  yearMonth  String @db.VarChar(4)
+  lastValue  Int    @default(0)
+
+  @@id([locationId, yearMonth])
+}
+
+/// Mirrors `Payment` exactly, keyed to `PassBooking` instead of `Booking`. No
+/// `gateway*` columns: a payment gateway for passes is out of scope for this
+/// module (unlike `Payment`'s reserved columns for a future Razorpay path).
+model PassPayment {
+  id            String @id @default(cuid())
+  passBookingId String @unique
+
+  method PaymentMethod
+  status PaymentStatus @default(PENDING)
+
+  /// Copied from the pass booking so this record is self-contained for
+  /// reconciliation, in paise.
+  amountInPaise Int
+
+  // ── UPI QR + UTR path ──────────────────────────────────────────────────
+  upiUtr           String?   @db.VarChar(32)
+  utrSubmittedAt   DateTime?
+  upiPayeeVpa      String?   @db.VarChar(120)
+  utrScreenshotUrl String?   @db.Text
+
+  // ── Cash-at-counter path ───────────────────────────────────────────────
+  cashReceivedAt DateTime?
+
+  // ── Admin verification ─────────────────────────────────────────────────
+  verifiedById String?
+  verifiedAt   DateTime?
+  reviewNote   String?   @db.Text
+
+  paidAt     DateTime?
+  refundedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  passBooking PassBooking @relation(fields: [passBookingId], references: [id], onDelete: Cascade)
+  verifiedBy  User?       @relation("PassPaymentVerifiedBy", fields: [verifiedById], references: [id], onDelete: SetNull)
+
+  @@index([method, status])
+  @@index([status])
+  @@index([upiUtr])
+  @@index([paidAt])
+}
+
+/// Mirrors `BookingStatusEvent`. Also carries plain field-level edits (Phase
+/// 21 — D5 point 8: an admin can edit every field on an issued pass, not only
+/// transition its status) via `changedFields`, a before/after diff.
+model PassStatusEvent {
+  id            String @id @default(cuid())
+  passBookingId String
+
+  fromStatus PassBookingStatus?
+  toStatus   PassBookingStatus
+
+  /// NULL when the actor was the system (no sweep exists for passes today,
+  /// per D5 point 9 — reserved for parity with `BookingStatusEvent`).
+  actorId   String?
+  actorRole UserRole?
+
+  /// Rejection reason, submitted UTR, or whatever context the change carried.
+  note String? @db.Text
+
+  /// Before/after diff for a plain field edit (Phase 21), e.g.
+  /// `{"startDate": {"from": "2026-10-01T...", "to": "2026-10-05T..."}}`. NULL
+  /// for a pure status transition that changed nothing else.
+  changedFields Json?
+
+  createdAt DateTime @default(now())
+
+  passBooking PassBooking @relation(fields: [passBookingId], references: [id], onDelete: Cascade)
+  actor       User?       @relation("PassBookingEventActor", fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([passBookingId, createdAt])
   @@index([createdAt])
 }
 

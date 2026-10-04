@@ -13,8 +13,13 @@
 import type {
   BookingStatus as SharedBookingStatus,
   DevicePlatform as SharedDevicePlatform,
+  PassBookingStatus as SharedPassBookingStatus,
+  PassEntrySide as SharedPassEntrySide,
+  PassSpecification as SharedPassSpecification,
+  PassVehicleCategory as SharedPassVehicleCategory,
   PaymentMethod as SharedPaymentMethod,
   PaymentStatus as SharedPaymentStatus,
+  ShiftType as SharedShiftType,
   UserRole as SharedUserRole,
   VehicleType as SharedVehicleType,
 } from '@parking/shared';
@@ -22,8 +27,13 @@ import type {
 import type {
   BookingStatus as DbBookingStatus,
   DevicePlatform as DbDevicePlatform,
+  PassBookingStatus as DbPassBookingStatus,
+  PassEntrySide as DbPassEntrySide,
+  PassSpecification as DbPassSpecification,
+  PassVehicleCategory as DbPassVehicleCategory,
   PaymentMethod as DbPaymentMethod,
   PaymentStatus as DbPaymentStatus,
+  ShiftType as DbShiftType,
   UserRole as DbUserRole,
   VehicleType as DbVehicleType,
 } from '@/generated/prisma/enums';
@@ -48,6 +58,11 @@ type _BookingStatusParity = AssertSame<Equals<SharedBookingStatus, DbBookingStat
 type _PaymentStatusParity = AssertSame<Equals<SharedPaymentStatus, DbPaymentStatus>>;
 type _PaymentMethodParity = AssertSame<Equals<SharedPaymentMethod, DbPaymentMethod>>;
 type _DevicePlatformParity = AssertSame<Equals<SharedDevicePlatform, DbDevicePlatform>>;
+type _ShiftTypeParity = AssertSame<Equals<SharedShiftType, DbShiftType>>;
+type _PassVehicleCategoryParity = AssertSame<Equals<SharedPassVehicleCategory, DbPassVehicleCategory>>;
+type _PassSpecificationParity = AssertSame<Equals<SharedPassSpecification, DbPassSpecification>>;
+type _PassEntrySideParity = AssertSame<Equals<SharedPassEntrySide, DbPassEntrySide>>;
+type _PassBookingStatusParity = AssertSame<Equals<SharedPassBookingStatus, DbPassBookingStatus>>;
 
 /** Keeps the aliases above referenced so nothing prunes them as unused. */
 export type EnumParityReport = {
@@ -57,4 +72,9 @@ export type EnumParityReport = {
   paymentStatus: _PaymentStatusParity;
   paymentMethod: _PaymentMethodParity;
   devicePlatform: _DevicePlatformParity;
+  shiftType: _ShiftTypeParity;
+  passVehicleCategory: _PassVehicleCategoryParity;
+  passSpecification: _PassSpecificationParity;
+  passEntrySide: _PassEntrySideParity;
+  passBookingStatus: _PassBookingStatusParity;
 };
