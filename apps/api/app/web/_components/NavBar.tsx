@@ -1,6 +1,7 @@
 'use client';
 
 import { signOut } from 'next-auth/react';
+import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
@@ -48,6 +49,14 @@ export function NavBar({ variant, userEmail }: NavBarProps) {
     <nav className="web-nav">
       <div className="web-nav-inner">
         <Link href={brandHref} className="web-nav-brand">
+          <Image
+            src="/brand/ke-logo-sm.png"
+            alt="Pay & Park logo"
+            width={200}
+            height={161}
+            className="web-nav-logo"
+            priority
+          />
           Pay &amp; Park
         </Link>
 

@@ -1,6 +1,7 @@
 'use client';
 
 import { signIn } from 'next-auth/react';
+import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState, type FormEvent } from 'react';
@@ -53,7 +54,17 @@ export default function SignInPage() {
 
   return (
     <main className="auth-shell">
-      <div className="auth-brand">Pay &amp; Park</div>
+      <div className="auth-brand">
+        <Image
+          src="/brand/ke-logo.png"
+          alt="Pay & Park logo"
+          width={480}
+          height={387}
+          className="auth-brand-logo"
+          priority
+        />
+        <span className="auth-brand-text">Pay &amp; Park</span>
+      </div>
 
       <div className="auth-header">
         <h1 className="text-heading">Welcome back</h1>
