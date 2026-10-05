@@ -9,7 +9,7 @@
  * `PassPlan` row:
  *
  *     amountInPaise          ← plan.priceInPaise
- *     startDate / endDate    ← computePassValidity(now, plan.validityMonths)
+ *     startDate / endDate    ← computePassValidity(now, plan.durationUnit, plan.durationValue)
  *     expiresAt              ← now + pass.expiryMinutes  (D5 point 9)
  *
  * `PassCreateRequestSchema` has no amount, validity, or date field to begin
@@ -65,12 +65,17 @@ export async function createPassBooking(input: CreatePassInput): Promise<CreateP
     mobileNumber,
     address,
     occupationCategory,
+    occupationOther,
     holidayOffDay,
+    holidayOffDayOther,
     helmet,
     locker,
     airCheck,
     rickshawParking,
     renewalReference,
+    expectedParkingDays,
+    entryTime,
+    exitTime,
   } = input;
 
   // `isActive` here too: a branch the admin has closed must stop taking pass
@@ -88,7 +93,8 @@ export async function createPassBooking(input: CreatePassInput): Promise<CreateP
       vehicleType: true,
       shiftType: true,
       label: true,
-      validityMonths: true,
+      durationUnit: true,
+      durationValue: true,
       priceInPaise: true,
     },
   });
@@ -99,7 +105,7 @@ export async function createPassBooking(input: CreatePassInput): Promise<CreateP
   }
 
   const submittedAt = new Date();
-  const { startDate, endDate } = computePassValidity(submittedAt, plan.validityMonths);
+  const { startDate, endDate } = computePassValidity(submittedAt, plan.durationUnit, plan.durationValue);
 
   const expiryMinutes = await getPassExpiryMinutes();
   const expiresAt = new Date(submittedAt.getTime() + expiryMinutes * MS_PER_MINUTE);
@@ -124,7 +130,8 @@ export async function createPassBooking(input: CreatePassInput): Promise<CreateP
         planLabel: plan.label,
         vehicleType: plan.vehicleType,
         shiftType: plan.shiftType,
-        validityMonths: plan.validityMonths,
+        durationUnit: plan.durationUnit,
+        durationValue: plan.durationValue,
         amountInPaise: plan.priceInPaise,
 
         // ── free-text application fields (D5 point 1) ──
@@ -135,12 +142,17 @@ export async function createPassBooking(input: CreatePassInput): Promise<CreateP
 
         // ── informational only (D5 point 5) ──
         occupationCategory: occupationCategory ?? null,
+        occupationOther: occupationCategory === 'OTHER' ? (occupationOther ?? null) : null,
         holidayOffDay: holidayOffDay ?? null,
+        holidayOffDayOther: holidayOffDay === 'OTHER' ? (holidayOffDayOther ?? null) : null,
         helmet,
         locker,
         airCheck,
         rickshawParking,
         renewalReference: renewalReference ?? null,
+        expectedParkingDays: expectedParkingDays ?? null,
+        entryTime: entryTime ?? null,
+        exitTime: exitTime ?? null,
 
         startDate,
         endDate,

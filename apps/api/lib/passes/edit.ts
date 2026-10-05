@@ -16,7 +16,10 @@
  */
 import type { Prisma } from '@/generated/prisma/client';
 import type {
+  PassDurationUnit,
   PassEntrySide,
+  PassHolidayOffDay,
+  PassOccupationCategory,
   PassSpecification,
   PassVehicleCategory,
   ShiftType,
@@ -37,18 +40,24 @@ export type PassFieldEdit = {
   vehicleCategory?: PassVehicleCategory;
   mobileNumber?: string;
   address?: string;
-  occupationCategory?: string | null;
-  holidayOffDay?: string | null;
+  occupationCategory?: PassOccupationCategory | null;
+  occupationOther?: string | null;
+  holidayOffDay?: PassHolidayOffDay | null;
+  holidayOffDayOther?: string | null;
   helmet?: boolean;
   locker?: boolean;
   airCheck?: boolean;
   rickshawParking?: boolean;
   renewalReference?: string | null;
+  expectedParkingDays?: number | null;
+  entryTime?: string | null;
+  exitTime?: string | null;
   specification?: PassSpecification | null;
   entrySide?: PassEntrySide | null;
   planLabel?: string;
   shiftType?: ShiftType;
-  validityMonths?: number;
+  durationUnit?: PassDurationUnit;
+  durationValue?: number;
   amountInPaise?: number;
   /** Already expanded to an exact IST instant by the route handler
    *  (`istDayBounds`) — see that file's header for why. */
@@ -63,17 +72,23 @@ const EDITABLE_FIELDS = [
   'mobileNumber',
   'address',
   'occupationCategory',
+  'occupationOther',
   'holidayOffDay',
+  'holidayOffDayOther',
   'helmet',
   'locker',
   'airCheck',
   'rickshawParking',
   'renewalReference',
+  'expectedParkingDays',
+  'entryTime',
+  'exitTime',
   'specification',
   'entrySide',
   'planLabel',
   'shiftType',
-  'validityMonths',
+  'durationUnit',
+  'durationValue',
   'amountInPaise',
   'startDate',
   'endDate',

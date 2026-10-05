@@ -52,7 +52,8 @@ export async function PATCH(req: NextRequest, { params }: RouteContext) {
         vehicleType: body.data.vehicleType,
         shiftType: body.data.shiftType,
         label: body.data.label,
-        validityMonths: body.data.validityMonths,
+        durationUnit: body.data.durationUnit,
+        durationValue: body.data.durationValue,
         // Post-transform, `priceInRupees` holds paise (see passes.ts).
         priceInPaise: body.data.priceInRupees,
         sortOrder: body.data.sortOrder,

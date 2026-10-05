@@ -19,7 +19,7 @@ import { apiRequest, errorMessage } from '../../../../../_lib/api';
 import { applyApiError, safeParseForm, type FieldErrors } from '../../../../../_lib/validation';
 
 const EMPTY = {
-  vehicleType: 'CAR' as VehicleType,
+  vehicleType: 'BIKE' as VehicleType,
   durationMinutes: '60',
   priceInRupees: '',
   sortOrder: '0',

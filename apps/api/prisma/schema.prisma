@@ -661,6 +661,36 @@ enum PassBookingStatus {
   CANCELLED
 }
 
+/// Revisits D5 point 3 (customer feedback after Phase 19-22 shipped): a plan
+/// is no longer always a whole number of calendar months. `MONTHS` keeps the
+/// original "snap to month-end" behaviour; `DAYS` is a literal day count
+/// clipped to the end of the purchase month (see `lib/passes/validity.ts`).
+enum PassDurationUnit {
+  MONTHS
+  DAYS
+}
+
+/// Customer feedback after Phase 20 shipped — this was free text with a
+/// best-effort regex match on the printable pass; now a real select so every
+/// value lands on an actual box on the printed form. `OTHER` pairs with
+/// `PassBooking.occupationOther` for the free-text case the paper form itself
+/// allows ("इतर").
+enum PassOccupationCategory {
+  LAWYER
+  SERVANT
+  DEVOTEE
+  BUSINESSMAN
+  SENIOR_CITIZEN
+  OTHER
+}
+
+/// Same story as `PassOccupationCategory`, for field 8's सुट्टीचे दिवस.
+enum PassHolidayOffDay {
+  SUNDAY
+  SATURDAY
+  OTHER
+}
+
 /// D5 point 2 — the pass pricing matrix. One row is one thing a customer can
 /// buy: "Kalyan · Bike · Day · Monthly · ₹500". Same role as `ParkingRate` for
 /// daily bookings, and the only place a pass price comes from (§32): the
@@ -679,10 +709,15 @@ model PassPlan {
   /// anything else. A price-tier label, not an enforced day count.
   label String @db.VarChar(40)
 
-  /// D5 point 3 — 1 for a tier that runs to the end of the purchase month, 3
-  /// for a quarter-style tier, etc. Feeds `PassBooking.startDate`/`endDate` at
-  /// submission (Phase 20).
-  validityMonths Int
+  /// Which unit `durationValue` counts in. Feeds `PassBooking.startDate`/
+  /// `endDate` at submission (`lib/passes/validity.ts`).
+  durationUnit PassDurationUnit @default(MONTHS)
+
+  /// `MONTHS`: 1 for a tier that runs to the end of the purchase month, 3 for
+  /// a quarter-style tier, etc. `DAYS`: a literal day count starting the
+  /// purchase date, clipped to the end of that calendar month — a "15-Day"
+  /// plan bought on the 25th is valid for 6 days, not into next month.
+  durationValue Int
 
   /// Integer paise. ₹500 → 50000.
   priceInPaise Int
@@ -731,11 +766,12 @@ model PassBooking {
   //  live `PassPlan` would silently rewrite its own history the moment the
   //  admin edits a price or retires the tier.
   // ─────────────────────────────────────────────────────────────────────────
-  planLabel      String      @db.VarChar(40)
-  vehicleType    VehicleType
-  shiftType      ShiftType
-  validityMonths Int
-  amountInPaise  Int
+  planLabel     String      @db.VarChar(40)
+  vehicleType   VehicleType
+  shiftType     ShiftType
+  durationUnit  PassDurationUnit
+  durationValue Int
+  amountInPaise Int
 
   // ─────────────────────────────────────────────────────────────────────────
   //  APPLICATION — free text per D5 point 1. Deliberately NOT validated
@@ -752,13 +788,29 @@ model PassBooking {
   //  INFORMATIONAL (D5 point 5) — customer-entered, admin-editable, never read
   //  by any pricing, validity, or eligibility logic.
   // ─────────────────────────────────────────────────────────────────────────
-  occupationCategory String?
-  holidayOffDay      String?
+  occupationCategory PassOccupationCategory?
+  /// Free text for `occupationCategory = OTHER` — the paper form's own "इतर
+  /// (...)" pattern, not a second occupation field.
+  occupationOther String? @db.VarChar(60)
+  holidayOffDay   PassHolidayOffDay?
+  /// Free text for `holidayOffDay = OTHER`, same pattern.
+  holidayOffDayOther String?  @db.VarChar(20)
   helmet             Boolean @default(false)
   locker             Boolean @default(false)
   airCheck           Boolean @default(false)
   rickshawParking    Boolean @default(false)
   renewalReference   String?
+
+  /// Customer-declared, purely informational (never enforced) — field 8's
+  /// "महिन्यातून एकूण ___ दिवस पार्किंग": roughly how many days this month the
+  /// customer expects to park, not a day count the system checks against.
+  expectedParkingDays Int?
+
+  /// Field 2's येण्याची वेळ / जाण्याची वेळ — the customer's usual arrival/
+  /// leaving time, `"HH:MM"` 24-hour, informational only. Free text rather
+  /// than `DateTime`: there is no date attached, just a daily routine.
+  entryTime String? @db.VarChar(5)
+  exitTime  String? @db.VarChar(5)
 
   // ─────────────────────────────────────────────────────────────────────────
   //  ADMIN-ONLY (D5 point 6) — nullable: unset until an admin sets them at

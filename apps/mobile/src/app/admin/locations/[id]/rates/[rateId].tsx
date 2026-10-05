@@ -52,7 +52,7 @@ export default function AdminRateFormScreen() {
   } = useForm<ParkingRateRequest, unknown, ParkingRateRequestParsed>({
     resolver: zodResolver(ParkingRateRequestSchema),
     defaultValues: {
-      vehicleType: 'CAR',
+      vehicleType: 'BIKE',
       durationMinutes: 60,
       priceInRupees: '' as unknown as number,
       sortOrder: 0,

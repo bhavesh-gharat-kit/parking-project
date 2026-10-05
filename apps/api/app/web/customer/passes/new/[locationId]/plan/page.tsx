@@ -7,6 +7,7 @@ import {
   SHIFT_TYPE_LABELS,
   VEHICLE_TYPE_LABELS,
   formatInr,
+  formatPassDuration,
   type PassPlan,
   type ShiftType,
   type VehicleType,
@@ -97,9 +98,7 @@ export default function NewPassPlanPage() {
             >
               <div className={`card${planId === plan.id ? ' card-selected' : ''}`}>
                 <p className="text-small-bold">{plan.label}</p>
-                <p className="text-small text-secondary">
-                  Valid {plan.validityMonths} {plan.validityMonths === 1 ? 'month' : 'months'}
-                </p>
+                <p className="text-small text-secondary">Valid {formatPassDuration(plan.durationUnit, plan.durationValue)}</p>
                 <p className="text-primary">{formatInr(plan.priceInPaise)}</p>
               </div>
             </button>

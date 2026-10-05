@@ -2,8 +2,21 @@
  * Pass validity window — `_/decisions.md` D5 point 3, computed ONCE at
  * submission and never recomputed.
  *
- *     startDate = the 1st of the submission's IST calendar month
- *     endDate   = the last day of the month `validityMonths - 1` months later
+ * Two duration units, per `PassPlan.durationUnit` (added after Phase 19-22
+ * shipped — the original "every tier snaps to calendar month" rule turned out
+ * to make a true weekly/15-day plan impossible to create):
+ *
+ *     MONTHS: startDate = the 1st of the submission's IST calendar month
+ *             endDate   = the last day of the month `durationValue - 1` months later
+ *
+ *     DAYS:   startDate = the submission's IST calendar day
+ *             endDate   = `startDate + (durationValue - 1)` days, clipped to
+ *                         the last day of `startDate`'s calendar month — a
+ *                         15-Day plan bought on the 25th is valid 6 days, not
+ *                         rolled into next month (chosen deliberately: a
+ *                         day-based plan never crosses a month boundary,
+ *                         keeping "which month was this pass active in"
+ *                         unambiguous for reporting).
  *
  * "Active" vs. "expired" is purely `endDate < today`, worked out wherever
  * it's displayed (`isPassExpired` in `@parking/shared`) — there is no cron,
@@ -11,11 +24,11 @@
  * later hand-edits these dates (D5 point 8), that manual value is simply what
  * gets compared from then on.
  *
- * ── Why month arithmetic, not day arithmetic ────────────────────────────────
+ * ── Why month arithmetic for `MONTHS`, not day arithmetic ───────────────────
  * `startDate` is always the 1st, so a submission on the 31st never "rolls
  * over" the way adding calendar days would — the day-of-month of the
  * submission is irrelevant beyond picking which month is month zero. Adding
- * `validityMonths - 1` to a (year, month) pair and then asking "how many days
+ * `durationValue - 1` to a (year, month) pair and then asking "how many days
  * does that resulting month have" is the only arithmetic here; nothing walks
  * day-by-day or risks landing on the 31st of a 30-day month.
  *
@@ -28,7 +41,7 @@
  * the stored instant reads back as IST midnight / IST end-of-day on any
  * client, not host-local midnight.
  */
-import { istParts } from '@parking/shared';
+import { istParts, type PassDurationUnit } from '@parking/shared';
 
 export type PassValidityWindow = { startDate: Date; endDate: Date };
 
@@ -47,19 +60,33 @@ function daysInMonth(year: number, month: number): number {
 /**
  * `submittedAt` — the instant the customer submitted the application (not
  * when an admin later confirms payment, per D5 point 3).
- * `validityMonths` — `PassPlan.validityMonths`, e.g. 1 for "runs to the end
- * of the purchase month", 3 for a quarter-style tier.
+ * `durationUnit`/`durationValue` — `PassPlan.durationUnit`/`durationValue`.
+ * `MONTHS`: 1 for "runs to the end of the purchase month", 3 for a
+ * quarter-style tier. `DAYS`: a literal day count, clipped to the end of the
+ * purchase month.
  */
-export function computePassValidity(submittedAt: Date, validityMonths: number): PassValidityWindow {
-  const { year, month } = istParts(submittedAt);
+export function computePassValidity(
+  submittedAt: Date,
+  durationUnit: PassDurationUnit,
+  durationValue: number,
+): PassValidityWindow {
+  const { year, month, day } = istParts(submittedAt);
+  const lastDayOfSubmissionMonth = daysInMonth(year, month);
+
+  if (durationUnit === 'DAYS') {
+    const startDate = new Date(`${year}-${pad(month)}-${pad(day)}T00:00:00.000+05:30`);
+    const endDay = Math.min(day + durationValue - 1, lastDayOfSubmissionMonth);
+    const endDate = new Date(`${year}-${pad(month)}-${pad(endDay)}T23:59:59.999+05:30`);
+    return { startDate, endDate };
+  }
 
   const startDate = new Date(`${year}-${pad(month)}-01T00:00:00.000+05:30`);
 
-  // Zero-indexed total months since some epoch, so adding `validityMonths - 1`
+  // Zero-indexed total months since some epoch, so adding `durationValue - 1`
   // and re-deriving (year, month) is a single modulo instead of a loop —
   // this is what makes crossing a year boundary (December + N) fall out
   // correctly with no special case.
-  const totalMonthsZeroIndexed = year * 12 + (month - 1) + (validityMonths - 1);
+  const totalMonthsZeroIndexed = year * 12 + (month - 1) + (durationValue - 1);
   const targetYear = Math.floor(totalMonthsZeroIndexed / 12);
   const targetMonth = (totalMonthsZeroIndexed % 12) + 1;
 

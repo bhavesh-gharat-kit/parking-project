@@ -30,6 +30,8 @@ const INSTRUCTIONS: string[] = [
   'विशेष सवलत/सन्मान योजना: वाहनधारकाकडून सूचना, निर्देश, आधुनिक तंत्रज्ञान इत्यादी वाहनतळाबाबत माहिती प्राप्त झाल्यास वाहनधारकांना योजनेचा लाभ घेता येईल.',
   'हा फॉर्म भरल्यानंतर माहिती तपासून पार्किंग पास स्टिकर तयार करण्यात येईल.',
   'आपण आपली वाहने ठरवून दिलेल्या ब्लॉक जागेत पार्क करावी. इतर ठिकाणी ठेवलेली वाहने नुकसान झाल्यास किंवा गैरसोय झाल्यास व्यवस्थापनाला जबाबदार धरणे येणार नाही.',
+  '30 मी पेक्षा जास्त काळ वाहन धारकांचे खर्च होत असतील तर त्या दिवसाचे पैसे पुढच्या महिन्यात ट्रान्सफर करण्यात येतील(T&C)',
+  'महिन्यातून 20 पेक्षा कमी वेळ वाहन पार्क करणार्यांना शुल्क परत देण्यात येईल(महिन्याअखेर ठरवण्यात येईल)'
 ];
 
 /** Row 4 वाहन प्रकार — only these four categories have their own box on the
@@ -47,27 +49,16 @@ const OTHER_VEHICLE_LABELS: Record<string, string> = {
   OTHER: 'Other',
 };
 
-/**
- * Field 13 व्यवसाय — `occupationCategory` is free text (D5 point 5), not an
- * enum, so this is a best-effort match against the paper's printed icons; an
- * unmatched non-empty value ticks इतर (Other) and prints the raw text rather
- * than being silently dropped.
- */
-const OCCUPATION_MATCHERS: { test: RegExp; label: string }[] = [
-  { test: /lawyer|वकील/i, label: 'वकील' },
-  { test: /servant|नोकर/i, label: 'नोकर' },
-  { test: /devotee|भाविक/i, label: 'भाविक' },
-  { test: /business/i, label: 'व्यापारी' },
-  { test: /senior/i, label: 'ज्येष्ठ नागरिक' },
-];
-
-/** Field 8 सुट्टीचे दिवस — D5: "Sunday/Saturday/Other", same free-text caveat. */
-function resolveHolidayOffDay(value: string | null): 'SUNDAY' | 'SATURDAY' | 'OTHER' | null {
-  if (!value || !value.trim()) return null;
-  if (/sun|रवि/i.test(value)) return 'SUNDAY';
-  if (/sat|शनि/i.test(value)) return 'SATURDAY';
-  return 'OTHER';
-}
+/** Field 13 व्यवसाय — `occupationCategory` is a real enum (customer feedback
+ *  after Phase 20 shipped: it used to be free text matched against these
+ *  icons by regex; now it's a select, so this is a straight label lookup). */
+const OCCUPATION_MARATHI_LABELS: Record<Exclude<PassDocument['occupationCategory'], null | 'OTHER'>, string> = {
+  LAWYER: 'वकील',
+  SERVANT: 'नोकर',
+  DEVOTEE: 'भाविक',
+  BUSINESSMAN: 'व्यापारी',
+  SENIOR_CITIZEN: 'ज्येष्ठ नागरिक',
+};
 
 function Boxes({ value, length }: { value: string; length: number }) {
   const chars = value.slice(0, length).split('');
@@ -138,13 +129,6 @@ export default function PassDocumentPage() {
     );
   }
 
-  const occupation = doc.occupationCategory?.trim()
-    ? (OCCUPATION_MATCHERS.find((option) => option.test.test(doc.occupationCategory ?? '')) ?? null)
-    : null;
-  const occupationIsOther = Boolean(doc.occupationCategory?.trim()) && occupation === null;
-
-  const holidayOffDay = resolveHolidayOffDay(doc.holidayOffDay);
-
   return (
     <div className="stack-loose">
       <div className="btn-row no-print">
@@ -195,8 +179,8 @@ export default function PassDocumentPage() {
           </Row>
 
           <Row n={2} label="वेळ :">
-            <span>येण्याची वेळ : ____ : ____</span>
-            <span>जाण्याची वेळ : ____ : ____</span>
+            <span>येण्याची वेळ : {doc.entryTime ?? '____ : ____'}</span>
+            <span>जाण्याची वेळ : {doc.exitTime ?? '____ : ____'}</span>
           </Row>
 
           <Row n={3} label="पेमेंट पद्धत :">
@@ -229,11 +213,14 @@ export default function PassDocumentPage() {
           </Row>
 
           <Row n={8} label="सुट्टी / Holiday :">
-            <span>महिन्यातून एकूण ___ दिवस पार्किंग</span>
+            <span>महिन्यातून एकूण {doc.expectedParkingDays ?? '___'} दिवस पार्किंग</span>
             <span>सुट्टीचे दिवस :</span>
-            <Check checked={holidayOffDay === 'SUNDAY'} label="रविवार" />
-            <Check checked={holidayOffDay === 'SATURDAY'} label="शनिवार" />
-            <Check checked={holidayOffDay === 'OTHER'} label={holidayOffDay === 'OTHER' ? `इतर (${doc.holidayOffDay})` : 'इतर'} />
+            <Check checked={doc.holidayOffDay === 'SUNDAY'} label="रविवार" />
+            <Check checked={doc.holidayOffDay === 'SATURDAY'} label="शनिवार" />
+            <Check
+              checked={doc.holidayOffDay === 'OTHER'}
+              label={doc.holidayOffDay === 'OTHER' && doc.holidayOffDayOther ? `इतर (${doc.holidayOffDayOther})` : 'इतर'}
+            />
           </Row>
 
           <Row n={9} label="पासाचा प्रकार :">
@@ -264,13 +251,18 @@ export default function PassDocumentPage() {
           </Row>
 
           <Row n={13} label="व्यवसाय :">
-            {OCCUPATION_MATCHERS.map((option) => (
-              <Check key={option.label} checked={occupation?.label === option.label} label={option.label} />
-            ))}
-            <Check checked={occupationIsOther} label={occupationIsOther ? `इतर (${doc.occupationCategory})` : 'इतर'} />
+            {(Object.entries(OCCUPATION_MARATHI_LABELS) as [keyof typeof OCCUPATION_MARATHI_LABELS, string][]).map(
+              ([key, label]) => (
+                <Check key={key} checked={doc.occupationCategory === key} label={label} />
+              ),
+            )}
+            <Check
+              checked={doc.occupationCategory === 'OTHER'}
+              label={doc.occupationCategory === 'OTHER' && doc.occupationOther ? `इतर (${doc.occupationOther})` : 'इतर'}
+            />
           </Row>
 
-          <Row n={14} label="स्टिकर क्रमांक :">
+          <Row n={14} label="यु. टी. आर. क्रमांक :">
             <Boxes value={doc.upiUtr ?? ''} length={16} />
           </Row>
         </section>

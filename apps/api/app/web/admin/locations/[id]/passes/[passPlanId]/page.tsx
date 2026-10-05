@@ -5,12 +5,15 @@ import { useEffect, useState, type FormEvent } from 'react';
 
 import {
   paiseToRupees,
+  PASS_DURATION_UNITS,
+  PASS_DURATION_UNIT_LABELS,
   PassPlanRequestSchema,
   SHIFT_TYPES,
   SHIFT_TYPE_LABELS,
   VEHICLE_TYPES,
   VEHICLE_TYPE_LABELS,
   type AdminPassPlan,
+  type PassDurationUnit,
   type ShiftType,
   type VehicleType,
 } from '@parking/shared';
@@ -21,10 +24,11 @@ import { apiRequest, errorMessage } from '../../../../../_lib/api';
 import { applyApiError, safeParseForm, type FieldErrors } from '../../../../../_lib/validation';
 
 const EMPTY = {
-  vehicleType: 'CAR' as VehicleType,
+  vehicleType: 'BIKE' as VehicleType,
   shiftType: 'DAY' as ShiftType,
   label: '',
-  validityMonths: '1',
+  durationUnit: 'MONTHS' as PassDurationUnit,
+  durationValue: '1',
   priceInRupees: '',
   sortOrder: '0',
   isActive: true,
@@ -60,7 +64,8 @@ export default function AdminPassPlanFormPage() {
           vehicleType: plan.vehicleType,
           shiftType: plan.shiftType,
           label: plan.label,
-          validityMonths: String(plan.validityMonths),
+          durationUnit: plan.durationUnit,
+          durationValue: String(plan.durationValue),
           priceInRupees: String(paiseToRupees(plan.priceInPaise)),
           sortOrder: String(plan.sortOrder),
           isActive: plan.isActive,
@@ -161,19 +166,39 @@ export default function AdminPassPlanFormPage() {
           />
         </Field>
 
+        <div className="field">
+          <span className="field-label">Duration unit</span>
+          <div className="chip-row">
+            {PASS_DURATION_UNITS.map((unit) => (
+              <button
+                key={unit}
+                type="button"
+                className={`chip${values.durationUnit === unit ? ' selected' : ''}`}
+                onClick={() => setValues((current) => ({ ...current, durationUnit: unit }))}
+              >
+                {PASS_DURATION_UNIT_LABELS[unit]}
+              </button>
+            ))}
+          </div>
+        </div>
+
         <Field
-          label="Validity (months)"
-          htmlFor="validityMonths"
-          error={fieldErrors.validityMonths}
-          hint="1 for a tier running to the end of the purchase month, 3 for a quarter, etc."
+          label={values.durationUnit === 'DAYS' ? 'Duration (days)' : 'Duration (months)'}
+          htmlFor="durationValue"
+          error={fieldErrors.durationValue}
+          hint={
+            values.durationUnit === 'DAYS'
+              ? 'A literal day count from the purchase date, clipped to the end of that calendar month — a 15-day plan bought on the 25th is valid 6 days, not into next month.'
+              : '1 for a tier running to the end of the purchase month, 3 for a quarter, etc.'
+          }
         >
           <input
-            id="validityMonths"
+            id="durationValue"
             type="number"
-            className={`input${fieldErrors.validityMonths ? ' has-error' : ''}`}
+            className={`input${fieldErrors.durationValue ? ' has-error' : ''}`}
             placeholder="1"
-            value={values.validityMonths}
-            onChange={set('validityMonths')}
+            value={values.durationValue}
+            onChange={set('durationValue')}
           />
         </Field>
 

@@ -70,7 +70,8 @@ export function toPassBooking(row: PassBookingWithRelations): PassBooking {
     planLabel: row.planLabel,
     vehicleType: row.vehicleType,
     shiftType: row.shiftType,
-    validityMonths: row.validityMonths,
+    durationUnit: row.durationUnit,
+    durationValue: row.durationValue,
     amountInPaise: row.amountInPaise,
 
     vehicleNumber: row.vehicleNumber,
@@ -79,12 +80,17 @@ export function toPassBooking(row: PassBookingWithRelations): PassBooking {
     address: row.address,
 
     occupationCategory: row.occupationCategory,
+    occupationOther: row.occupationOther,
     holidayOffDay: row.holidayOffDay,
+    holidayOffDayOther: row.holidayOffDayOther,
     helmet: row.helmet,
     locker: row.locker,
     airCheck: row.airCheck,
     rickshawParking: row.rickshawParking,
     renewalReference: row.renewalReference,
+    expectedParkingDays: row.expectedParkingDays,
+    entryTime: row.entryTime,
+    exitTime: row.exitTime,
 
     specification: row.specification,
     entrySide: row.entrySide,

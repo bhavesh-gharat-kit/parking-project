@@ -16,7 +16,8 @@ export function toPassPlan(plan: PassPlanRow): PassPlan {
     vehicleType: plan.vehicleType,
     shiftType: plan.shiftType,
     label: plan.label,
-    validityMonths: plan.validityMonths,
+    durationUnit: plan.durationUnit,
+    durationValue: plan.durationValue,
     priceInPaise: plan.priceInPaise,
     sortOrder: plan.sortOrder,
   };

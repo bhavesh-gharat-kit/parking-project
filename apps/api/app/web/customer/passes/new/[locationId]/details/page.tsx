@@ -4,11 +4,17 @@ import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useState, type FormEvent } from 'react';
 
 import {
+  PASS_HOLIDAY_OFF_DAYS,
+  PASS_HOLIDAY_OFF_DAY_LABELS,
+  PASS_OCCUPATION_CATEGORIES,
+  PASS_OCCUPATION_CATEGORY_LABELS,
   PASS_VEHICLE_CATEGORIES,
   PASS_VEHICLE_CATEGORY_LABELS,
   PassCreateRequestSchema,
   formatInr,
   type PassBooking,
+  type PassHolidayOffDay,
+  type PassOccupationCategory,
   type PassPlan,
   type PassVehicleCategory,
   type ProfileResponse,
@@ -25,13 +31,18 @@ const EMPTY = {
   vehicleCategory: null as PassVehicleCategory | null,
   mobileNumber: '',
   address: '',
-  occupationCategory: '',
-  holidayOffDay: '',
+  occupationCategory: null as PassOccupationCategory | null,
+  occupationOther: '',
+  holidayOffDay: null as PassHolidayOffDay | null,
+  holidayOffDayOther: '',
   helmet: false,
   locker: false,
   airCheck: false,
   rickshawParking: false,
   renewalReference: '',
+  expectedParkingDays: '',
+  entryTime: '',
+  exitTime: '',
 };
 
 export default function NewPassDetailsPage() {
@@ -198,31 +209,104 @@ export default function NewPassDetailsPage() {
           />
         </Field>
 
+        <div className="field">
+          <span className="field-label">Occupation (optional)</span>
+          <div className="chip-row">
+            {PASS_OCCUPATION_CATEGORIES.map((category) => (
+              <button
+                key={category}
+                type="button"
+                className={`chip${values.occupationCategory === category ? ' selected' : ''}`}
+                onClick={() =>
+                  setValues((current) => ({
+                    ...current,
+                    occupationCategory: current.occupationCategory === category ? null : category,
+                  }))
+                }
+              >
+                {PASS_OCCUPATION_CATEGORY_LABELS[category]}
+              </button>
+            ))}
+          </div>
+          {fieldErrors.occupationCategory ? <span className="field-error">{fieldErrors.occupationCategory}</span> : null}
+          {values.occupationCategory === 'OTHER' ? (
+            <Field label="Specify occupation" htmlFor="occupationOther" error={fieldErrors.occupationOther}>
+              <input
+                id="occupationOther"
+                className={`input${fieldErrors.occupationOther ? ' has-error' : ''}`}
+                value={values.occupationOther}
+                onChange={(event) => setValues((current) => ({ ...current, occupationOther: event.target.value }))}
+              />
+            </Field>
+          ) : null}
+        </div>
+
+        <div className="field">
+          <span className="field-label">Weekly off day (optional)</span>
+          <div className="chip-row">
+            {PASS_HOLIDAY_OFF_DAYS.map((day) => (
+              <button
+                key={day}
+                type="button"
+                className={`chip${values.holidayOffDay === day ? ' selected' : ''}`}
+                onClick={() =>
+                  setValues((current) => ({
+                    ...current,
+                    holidayOffDay: current.holidayOffDay === day ? null : day,
+                  }))
+                }
+              >
+                {PASS_HOLIDAY_OFF_DAY_LABELS[day]}
+              </button>
+            ))}
+          </div>
+          {fieldErrors.holidayOffDay ? <span className="field-error">{fieldErrors.holidayOffDay}</span> : null}
+          {values.holidayOffDay === 'OTHER' ? (
+            <Field label="Specify day" htmlFor="holidayOffDayOther" error={fieldErrors.holidayOffDayOther}>
+              <input
+                id="holidayOffDayOther"
+                className={`input${fieldErrors.holidayOffDayOther ? ' has-error' : ''}`}
+                value={values.holidayOffDayOther}
+                onChange={(event) => setValues((current) => ({ ...current, holidayOffDayOther: event.target.value }))}
+              />
+            </Field>
+          ) : null}
+        </div>
+
         <Field
-          label="Occupation (optional)"
-          htmlFor="occupationCategory"
-          error={fieldErrors.occupationCategory}
-          hint="e.g. Lawyer, Servant, Devotee, Businessman, Senior Citizen"
+          label="Expected parking days this month (optional)"
+          htmlFor="expectedParkingDays"
+          error={fieldErrors.expectedParkingDays}
+          hint="Roughly how many days you expect to park — informational only, never checked."
         >
           <input
-            id="occupationCategory"
-            className={`input${fieldErrors.occupationCategory ? ' has-error' : ''}`}
-            value={values.occupationCategory}
-            onChange={(event) => setValues((current) => ({ ...current, occupationCategory: event.target.value }))}
+            id="expectedParkingDays"
+            type="number"
+            min={1}
+            max={31}
+            className={`input${fieldErrors.expectedParkingDays ? ' has-error' : ''}`}
+            value={values.expectedParkingDays}
+            onChange={(event) => setValues((current) => ({ ...current, expectedParkingDays: event.target.value }))}
           />
         </Field>
 
-        <Field
-          label="Weekly off day (optional)"
-          htmlFor="holidayOffDay"
-          error={fieldErrors.holidayOffDay}
-        >
+        <Field label="Usual arrival time (optional)" htmlFor="entryTime" error={fieldErrors.entryTime}>
           <input
-            id="holidayOffDay"
-            className={`input${fieldErrors.holidayOffDay ? ' has-error' : ''}`}
-            placeholder="e.g. Sunday"
-            value={values.holidayOffDay}
-            onChange={(event) => setValues((current) => ({ ...current, holidayOffDay: event.target.value }))}
+            id="entryTime"
+            type="time"
+            className={`input${fieldErrors.entryTime ? ' has-error' : ''}`}
+            value={values.entryTime}
+            onChange={(event) => setValues((current) => ({ ...current, entryTime: event.target.value }))}
+          />
+        </Field>
+
+        <Field label="Usual leaving time (optional)" htmlFor="exitTime" error={fieldErrors.exitTime}>
+          <input
+            id="exitTime"
+            type="time"
+            className={`input${fieldErrors.exitTime ? ' has-error' : ''}`}
+            value={values.exitTime}
+            onChange={(event) => setValues((current) => ({ ...current, exitTime: event.target.value }))}
           />
         </Field>
 

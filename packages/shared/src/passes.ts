@@ -52,6 +52,68 @@ export const PASS_VEHICLE_CATEGORY_LABELS: Record<PassVehicleCategory, string> =
   OTHER: 'Other',
 };
 
+/* ─────────────────────── Pass duration unit ──────────────────────────── */
+
+/**
+ * Which unit `PassPlan.durationValue` counts in. Added after the original
+ * "every tier snaps to calendar month" rule (D5 point 3) turned out to make a
+ * true weekly/15-day plan impossible for the admin to create — `MONTHS` keeps
+ * that behaviour, `DAYS` is a literal day count clipped to month-end (see
+ * `apps/api/lib/passes/validity.ts`).
+ */
+export const PASS_DURATION_UNITS = ['MONTHS', 'DAYS'] as const;
+export type PassDurationUnit = (typeof PASS_DURATION_UNITS)[number];
+export const PassDurationUnitSchema = z.enum(PASS_DURATION_UNITS);
+
+export const PASS_DURATION_UNIT_LABELS: Record<PassDurationUnit, string> = {
+  MONTHS: 'Months',
+  DAYS: 'Days',
+};
+
+/** "15 Days" / "1 Month" / "3 Months" — the one place this phrase is built,
+ *  so the plan list, the plan form, and the review card never disagree. */
+export function formatPassDuration(unit: PassDurationUnit, value: number): string {
+  if (unit === 'DAYS') return `${value} ${value === 1 ? 'Day' : 'Days'}`;
+  return `${value} ${value === 1 ? 'Month' : 'Months'}`;
+}
+
+/* ───────────────── Pass occupation category (D5 point 5) ─────────────── */
+
+/** Field 13 व्यवसाय — informational only, never read by pricing/validity/
+ *  eligibility logic. `OTHER` pairs with a free-text `occupationOther`. */
+export const PASS_OCCUPATION_CATEGORIES = [
+  'LAWYER',
+  'SERVANT',
+  'DEVOTEE',
+  'BUSINESSMAN',
+  'SENIOR_CITIZEN',
+  'OTHER',
+] as const;
+export type PassOccupationCategory = (typeof PASS_OCCUPATION_CATEGORIES)[number];
+export const PassOccupationCategorySchema = z.enum(PASS_OCCUPATION_CATEGORIES);
+
+export const PASS_OCCUPATION_CATEGORY_LABELS: Record<PassOccupationCategory, string> = {
+  LAWYER: 'Lawyer',
+  SERVANT: 'Servant',
+  DEVOTEE: 'Devotee',
+  BUSINESSMAN: 'Businessman',
+  SENIOR_CITIZEN: 'Senior Citizen',
+  OTHER: 'Other',
+};
+
+/* ───────────────────── Pass holiday off day (D5 point 5) ─────────────── */
+
+/** Field 8's सुट्टीचे दिवस — same "informational, OTHER pairs with free text" shape. */
+export const PASS_HOLIDAY_OFF_DAYS = ['SUNDAY', 'SATURDAY', 'OTHER'] as const;
+export type PassHolidayOffDay = (typeof PASS_HOLIDAY_OFF_DAYS)[number];
+export const PassHolidayOffDaySchema = z.enum(PASS_HOLIDAY_OFF_DAYS);
+
+export const PASS_HOLIDAY_OFF_DAY_LABELS: Record<PassHolidayOffDay, string> = {
+  SUNDAY: 'Sunday',
+  SATURDAY: 'Saturday',
+  OTHER: 'Other',
+};
+
 /* ───────────────────── Pass specification (D5 point 6) ───────────────── */
 
 /** Admin-only classification of the pass holder — never customer-selected. */
@@ -130,11 +192,14 @@ export const PassPlanRequestSchema = z.object({
   vehicleType: VehicleTypeSchema,
   shiftType: ShiftTypeSchema,
   label: z.string().trim().min(1, 'Enter a label').max(40, 'Keep it under 40 characters'),
-  validityMonths: z.coerce
-    .number({ error: 'Enter the validity in months' })
-    .int('Whole months only')
-    .positive('Validity must be at least 1 month')
-    .max(24, 'Keep it to 24 months or less'),
+  durationUnit: PassDurationUnitSchema,
+  /** Months: up to 24. Days: up to 31 — a day-based plan never crosses a
+   *  month boundary (`computePassValidity`'s clip), so more than a month's
+   *  worth of days could never actually be used. */
+  durationValue: z.coerce
+    .number({ error: 'Enter the duration' })
+    .int('Whole numbers only')
+    .positive('Duration must be at least 1'),
   /** Input: rupees the admin typed. Output (post-transform): paise. */
   priceInRupees: z.coerce
     .number({ error: 'Enter a price' })
@@ -143,7 +208,10 @@ export const PassPlanRequestSchema = z.object({
     .transform((rupees) => rupeesToPaise(rupees)),
   sortOrder: z.coerce.number().int().default(0),
   isActive: z.boolean().default(true),
-});
+}).refine(
+  (value) => (value.durationUnit === 'MONTHS' ? value.durationValue <= 24 : value.durationValue <= 31),
+  { message: 'Months: up to 24. Days: up to 31.', path: ['durationValue'] },
+);
 export type PassPlanRequest = z.input<typeof PassPlanRequestSchema>;
 export type PassPlanRequestParsed = z.output<typeof PassPlanRequestSchema>;
 
@@ -154,7 +222,8 @@ export const PassPlanSchema = z.object({
   vehicleType: VehicleTypeSchema,
   shiftType: ShiftTypeSchema,
   label: z.string(),
-  validityMonths: z.number(),
+  durationUnit: PassDurationUnitSchema,
+  durationValue: z.number(),
   priceInPaise: z.number(),
   sortOrder: z.number(),
 });
@@ -258,6 +327,27 @@ function optionalTextSchema(max: number) {
  * never a second, independently-tamperable input that could disagree with
  * the plan.
  */
+/** Empty string, `null` (the chip selector's "nothing picked" state) and
+ *  `undefined` all mean "not supplied" — same convention as `optionalTextSchema`. */
+const OptionalPassOccupationCategorySchema = z.preprocess(
+  (value) => (value === null || (typeof value === 'string' && value.trim() === '') ? undefined : value),
+  PassOccupationCategorySchema.optional(),
+);
+const OptionalPassHolidayOffDaySchema = z.preprocess(
+  (value) => (value === null || (typeof value === 'string' && value.trim() === '') ? undefined : value),
+  PassHolidayOffDaySchema.optional(),
+);
+
+/** `"HH:MM"`, 24-hour — field 2's येण्याची वेळ / जाण्याची वेळ. Informational
+ *  only; empty string means "not supplied". */
+const OptionalTimeSchema = z.preprocess(
+  (value) => (typeof value === 'string' && value.trim() === '' ? undefined : value),
+  z
+    .string()
+    .regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Enter a time as HH:MM')
+    .optional(),
+);
+
 export const PassCreateRequestSchema = z.object({
   locationId: CuidSchema,
   passPlanId: CuidSchema,
@@ -267,13 +357,22 @@ export const PassCreateRequestSchema = z.object({
   mobileNumber: PassMobileNumberSchema,
   address: z.string().trim().min(1, 'Enter an address').max(500, 'Keep it under 500 characters'),
   /** D5 point 5 — informational only, never read by pricing/validity/eligibility logic. */
-  occupationCategory: optionalTextSchema(60),
-  holidayOffDay: optionalTextSchema(20),
+  occupationCategory: OptionalPassOccupationCategorySchema,
+  occupationOther: optionalTextSchema(60),
+  holidayOffDay: OptionalPassHolidayOffDaySchema,
+  holidayOffDayOther: optionalTextSchema(20),
   helmet: z.boolean().default(false),
   locker: z.boolean().default(false),
   airCheck: z.boolean().default(false),
   rickshawParking: z.boolean().default(false),
   renewalReference: optionalTextSchema(120),
+  /** Customer-declared, informational only — never enforced. */
+  expectedParkingDays: z.preprocess(
+    (value) => (typeof value === 'string' && value.trim() === '' ? undefined : value),
+    z.coerce.number().int().min(1).max(31).optional(),
+  ),
+  entryTime: OptionalTimeSchema,
+  exitTime: OptionalTimeSchema,
 });
 export type PassCreateRequest = z.input<typeof PassCreateRequestSchema>;
 export type PassCreateRequestParsed = z.output<typeof PassCreateRequestSchema>;
@@ -326,7 +425,8 @@ export const PassBookingSchema = z.object({
   planLabel: z.string(),
   vehicleType: VehicleTypeSchema,
   shiftType: ShiftTypeSchema,
-  validityMonths: z.number(),
+  durationUnit: PassDurationUnitSchema,
+  durationValue: z.number(),
   /** Integer paise, fixed at creation by the backend (§32 lineage). */
   amountInPaise: z.number(),
 
@@ -335,13 +435,18 @@ export const PassBookingSchema = z.object({
   mobileNumber: z.string(),
   address: z.string(),
 
-  occupationCategory: z.string().nullable(),
-  holidayOffDay: z.string().nullable(),
+  occupationCategory: PassOccupationCategorySchema.nullable(),
+  occupationOther: z.string().nullable(),
+  holidayOffDay: PassHolidayOffDaySchema.nullable(),
+  holidayOffDayOther: z.string().nullable(),
   helmet: z.boolean(),
   locker: z.boolean(),
   airCheck: z.boolean(),
   rickshawParking: z.boolean(),
   renewalReference: z.string().nullable(),
+  expectedParkingDays: z.number().nullable(),
+  entryTime: z.string().nullable(),
+  exitTime: z.string().nullable(),
 
   /** Admin-only (D5 point 6) — `null` until an admin sets them (Phase 21). */
   specification: PassSpecificationSchema.nullable(),

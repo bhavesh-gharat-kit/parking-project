@@ -31,15 +31,23 @@ export const MEDIAHOST_CONFIG = {
  * `<Image>` `uri`, which — unlike a browser `<img src>` — cannot resolve a
  * relative URL against "the current page", so it must always be absolute.
  *
- * `baseDir` is anchored to this file's own location, not `process.cwd()` —
- * the latter is wherever the Node process happened to be launched from
- * (PM2's ecosystem `cwd`, a monorepo root, wherever), which is not
- * guaranteed to be `apps/api` and silently writes files to a path nothing
- * serves (confirmed in production: the upload reported success, but the
- * returned URL 404'd — the write landed outside the served `public/`).
+ * `baseDir` is anchored to `process.cwd()`, not `__dirname`. `__dirname` was
+ * tried first and broke in practice: under `next dev --turbopack` it does not
+ * resolve to a real filesystem path for a route handler's compiled module at
+ * all (observed resolving to `/ROOT`, an internal Turbopack placeholder, not
+ * a location anything can `mkdir` into) — every local-storage upload failed
+ * with `EACCES`. `process.cwd()` is safe here specifically because this app
+ * has no `output: 'standalone'` in `next.config.ts`: Next.js (`next dev` and
+ * `next start` alike) requires its process to be launched with cwd at the
+ * project root to find `next.config.ts`/`.next`/`public/` at all, so by the
+ * time this code runs, `process.cwd()` === `apps/api` is already a
+ * precondition for the server serving anything — not an assumption unique to
+ * uploads. (If `output: 'standalone'` is ever turned on, this needs
+ * revisiting: a standalone build copies its own `public/`, and PM2's cwd may
+ * no longer coincide with where that copy lives.)
  */
 export const LOCAL_CONFIG = {
-  baseDir: path.join(__dirname, '../../public/uploads'),
+  baseDir: path.join(process.cwd(), 'public/uploads'),
   baseFolder: 'uploads',
   baseUrl: env.AUTH_URL,
 };

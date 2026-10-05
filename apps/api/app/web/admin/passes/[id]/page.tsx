@@ -7,8 +7,14 @@ import { useCallback, useEffect, useState, type FormEvent } from 'react';
 
 import {
   AdminPassEditRequestSchema,
+  PASS_DURATION_UNITS,
+  PASS_DURATION_UNIT_LABELS,
   PASS_ENTRY_SIDES,
   PASS_ENTRY_SIDE_LABELS,
+  PASS_HOLIDAY_OFF_DAYS,
+  PASS_HOLIDAY_OFF_DAY_LABELS,
+  PASS_OCCUPATION_CATEGORIES,
+  PASS_OCCUPATION_CATEGORY_LABELS,
   PASS_SPECIFICATIONS,
   PASS_SPECIFICATION_LABELS,
   PASS_VEHICLE_CATEGORIES,
@@ -22,6 +28,7 @@ import {
   formatInr,
   formatIstDate,
   formatIstDateTime,
+  formatPassDuration,
   istParts,
   paiseToRupees,
   rupeesToPaise,
@@ -29,6 +36,8 @@ import {
   type AdminPassStatusEvent,
   type PassBookingStatus,
   type PassEntrySide,
+  type PassHolidayOffDay,
+  type PassOccupationCategory,
   type PassSpecification,
   type PassVehicleCategory,
   type ShiftType,
@@ -62,17 +71,23 @@ const FIELD_LABELS: Record<string, string> = {
   mobileNumber: 'Mobile number',
   address: 'Address',
   occupationCategory: 'Occupation',
+  occupationOther: 'Occupation (other)',
   holidayOffDay: 'Weekly off day',
+  holidayOffDayOther: 'Weekly off day (other)',
   helmet: 'Helmet',
   locker: 'Locker',
   airCheck: 'Air check',
   rickshawParking: 'Rickshaw parking',
   renewalReference: 'Renewal reference',
+  expectedParkingDays: 'Expected parking days',
+  entryTime: 'Usual arrival time',
+  exitTime: 'Usual leaving time',
   specification: 'Specification',
   entrySide: 'Entry side',
   planLabel: 'Plan label',
   shiftType: 'Shift',
-  validityMonths: 'Validity (months)',
+  durationUnit: 'Duration unit',
+  durationValue: 'Duration',
   amountInPaise: 'Amount',
   startDate: 'Valid from',
   endDate: 'Valid until',
@@ -156,18 +171,24 @@ export default function AdminPassDetailPage() {
       vehicleCategory: row.vehicleCategory,
       mobileNumber: row.mobileNumber,
       address: row.address,
-      occupationCategory: row.occupationCategory ?? '',
-      holidayOffDay: row.holidayOffDay ?? '',
+      occupationCategory: row.occupationCategory,
+      occupationOther: row.occupationOther ?? '',
+      holidayOffDay: row.holidayOffDay,
+      holidayOffDayOther: row.holidayOffDayOther ?? '',
       helmet: row.helmet,
       locker: row.locker,
       airCheck: row.airCheck,
       rickshawParking: row.rickshawParking,
       renewalReference: row.renewalReference ?? '',
+      expectedParkingDays: row.expectedParkingDays === null ? '' : String(row.expectedParkingDays),
+      entryTime: row.entryTime ?? '',
+      exitTime: row.exitTime ?? '',
       specification: row.specification,
       entrySide: row.entrySide,
       planLabel: row.planLabel,
       shiftType: row.shiftType,
-      validityMonths: String(row.validityMonths),
+      durationUnit: row.durationUnit,
+      durationValue: String(row.durationValue),
       amountInRupees: String(paiseToRupees(row.amountInPaise)),
       startDate: toDateInputValue(row.startDate),
       endDate: toDateInputValue(row.endDate),
@@ -297,7 +318,7 @@ export default function AdminPassDetailPage() {
     { label: 'Vehicle', value: `${passBooking.vehicleNumber} (${PASS_VEHICLE_CATEGORY_LABELS[passBooking.vehicleCategory]})` },
     { label: 'Vehicle type', value: VEHICLE_TYPE_LABELS[passBooking.vehicleType] },
     { label: 'Shift', value: SHIFT_TYPE_LABELS[passBooking.shiftType] },
-    { label: 'Plan', value: passBooking.planLabel },
+    { label: 'Plan', value: `${passBooking.planLabel} (${formatPassDuration(passBooking.durationUnit, passBooking.durationValue)})` },
     { label: 'Mobile', value: passBooking.mobileNumber },
     { label: 'Address', value: passBooking.address },
     { label: 'Valid from', value: formatIstDate(passBooking.startDate) },
@@ -316,8 +337,33 @@ export default function AdminPassDetailPage() {
       value: passBooking.specification ? PASS_SPECIFICATION_LABELS[passBooking.specification] : 'Not set',
     },
     { label: 'Entry side', value: passBooking.entrySide ? PASS_ENTRY_SIDE_LABELS[passBooking.entrySide] : 'Not set' },
-    ...(passBooking.occupationCategory ? [{ label: 'Occupation', value: passBooking.occupationCategory }] : []),
-    ...(passBooking.holidayOffDay ? [{ label: 'Weekly off day', value: passBooking.holidayOffDay }] : []),
+    ...(passBooking.occupationCategory
+      ? [
+          {
+            label: 'Occupation',
+            value:
+              passBooking.occupationCategory === 'OTHER' && passBooking.occupationOther
+                ? passBooking.occupationOther
+                : PASS_OCCUPATION_CATEGORY_LABELS[passBooking.occupationCategory],
+          },
+        ]
+      : []),
+    ...(passBooking.holidayOffDay
+      ? [
+          {
+            label: 'Weekly off day',
+            value:
+              passBooking.holidayOffDay === 'OTHER' && passBooking.holidayOffDayOther
+                ? passBooking.holidayOffDayOther
+                : PASS_HOLIDAY_OFF_DAY_LABELS[passBooking.holidayOffDay],
+          },
+        ]
+      : []),
+    ...(passBooking.expectedParkingDays !== null
+      ? [{ label: 'Expected parking days', value: String(passBooking.expectedParkingDays) }]
+      : []),
+    ...(passBooking.entryTime ? [{ label: 'Usual arrival time', value: passBooking.entryTime }] : []),
+    ...(passBooking.exitTime ? [{ label: 'Usual leaving time', value: passBooking.exitTime }] : []),
     ...(passBooking.renewalReference ? [{ label: 'Renewal reference', value: passBooking.renewalReference }] : []),
     { label: 'Facilities', value: (['helmet', 'locker', 'airCheck', 'rickshawParking'] as const)
         .filter((key) => passBooking[key])
@@ -569,21 +615,94 @@ export default function AdminPassDetailPage() {
           />
         </Field>
 
-        <Field label="Occupation" htmlFor="occupationCategory" error={editFieldErrors.occupationCategory}>
+        <div className="field">
+          <span className="field-label">Occupation</span>
+          <div className="chip-row">
+            {PASS_OCCUPATION_CATEGORIES.map((category) => (
+              <button
+                key={category}
+                type="button"
+                className={`chip${editValues.occupationCategory === category ? ' selected' : ''}`}
+                onClick={() =>
+                  setEditValues((c) => ({
+                    ...c,
+                    occupationCategory: c.occupationCategory === category ? null : category,
+                  }))
+                }
+              >
+                {PASS_OCCUPATION_CATEGORY_LABELS[category]}
+              </button>
+            ))}
+          </div>
+          {editValues.occupationCategory === 'OTHER' ? (
+            <Field label="Specify occupation" htmlFor="occupationOther" error={editFieldErrors.occupationOther}>
+              <input
+                id="occupationOther"
+                className="input"
+                value={editValues.occupationOther as string}
+                onChange={(event) => setEditValues((c) => ({ ...c, occupationOther: event.target.value }))}
+              />
+            </Field>
+          ) : null}
+        </div>
+
+        <div className="field">
+          <span className="field-label">Weekly off day</span>
+          <div className="chip-row">
+            {PASS_HOLIDAY_OFF_DAYS.map((day) => (
+              <button
+                key={day}
+                type="button"
+                className={`chip${editValues.holidayOffDay === day ? ' selected' : ''}`}
+                onClick={() =>
+                  setEditValues((c) => ({ ...c, holidayOffDay: c.holidayOffDay === day ? null : day }))
+                }
+              >
+                {PASS_HOLIDAY_OFF_DAY_LABELS[day]}
+              </button>
+            ))}
+          </div>
+          {editValues.holidayOffDay === 'OTHER' ? (
+            <Field label="Specify day" htmlFor="holidayOffDayOther" error={editFieldErrors.holidayOffDayOther}>
+              <input
+                id="holidayOffDayOther"
+                className="input"
+                value={editValues.holidayOffDayOther as string}
+                onChange={(event) => setEditValues((c) => ({ ...c, holidayOffDayOther: event.target.value }))}
+              />
+            </Field>
+          ) : null}
+        </div>
+
+        <Field label="Expected parking days" htmlFor="expectedParkingDays" error={editFieldErrors.expectedParkingDays}>
           <input
-            id="occupationCategory"
+            id="expectedParkingDays"
+            type="number"
+            min={1}
+            max={31}
             className="input"
-            value={editValues.occupationCategory as string}
-            onChange={(event) => setEditValues((c) => ({ ...c, occupationCategory: event.target.value }))}
+            value={editValues.expectedParkingDays as string}
+            onChange={(event) => setEditValues((c) => ({ ...c, expectedParkingDays: event.target.value }))}
           />
         </Field>
 
-        <Field label="Weekly off day" htmlFor="holidayOffDay" error={editFieldErrors.holidayOffDay}>
+        <Field label="Usual arrival time" htmlFor="entryTime" error={editFieldErrors.entryTime}>
           <input
-            id="holidayOffDay"
+            id="entryTime"
+            type="time"
             className="input"
-            value={editValues.holidayOffDay as string}
-            onChange={(event) => setEditValues((c) => ({ ...c, holidayOffDay: event.target.value }))}
+            value={editValues.entryTime as string}
+            onChange={(event) => setEditValues((c) => ({ ...c, entryTime: event.target.value }))}
+          />
+        </Field>
+
+        <Field label="Usual leaving time" htmlFor="exitTime" error={editFieldErrors.exitTime}>
+          <input
+            id="exitTime"
+            type="time"
+            className="input"
+            value={editValues.exitTime as string}
+            onChange={(event) => setEditValues((c) => ({ ...c, exitTime: event.target.value }))}
           />
         </Field>
 
@@ -678,13 +797,34 @@ export default function AdminPassDetailPage() {
           </div>
         </div>
 
-        <Field label="Validity (months)" htmlFor="validityMonths" error={editFieldErrors.validityMonths}>
+        <div className="field">
+          <span className="field-label">Duration unit</span>
+          <div className="chip-row">
+            {PASS_DURATION_UNITS.map((unit) => (
+              <button
+                key={unit}
+                type="button"
+                className={`chip${editValues.durationUnit === unit ? ' selected' : ''}`}
+                onClick={() => setEditValues((c) => ({ ...c, durationUnit: unit }))}
+              >
+                {PASS_DURATION_UNIT_LABELS[unit]}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <Field
+          label={editValues.durationUnit === 'DAYS' ? 'Duration (days)' : 'Duration (months)'}
+          htmlFor="durationValue"
+          error={editFieldErrors.durationValue}
+          hint="A snapshot of the plan at the time this pass was bought — editing it does not recompute Valid from/until below."
+        >
           <input
-            id="validityMonths"
+            id="durationValue"
             type="number"
             className="input"
-            value={editValues.validityMonths as string}
-            onChange={(event) => setEditValues((c) => ({ ...c, validityMonths: event.target.value }))}
+            value={editValues.durationValue as string}
+            onChange={(event) => setEditValues((c) => ({ ...c, durationValue: event.target.value }))}
           />
         </Field>
 

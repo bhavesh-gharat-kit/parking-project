@@ -76,18 +76,21 @@ const KALYAN_PASS_PLANS: {
   vehicleType: 'BIKE' | 'CAR';
   shiftType: 'DAY' | 'NIGHT' | 'BOTH';
   label: string;
-  validityMonths: number;
+  durationUnit: 'MONTHS' | 'DAYS';
+  durationValue: number;
   priceInPaise: number;
   sortOrder: number;
 }[] = [
-  { vehicleType: 'BIKE', shiftType: 'DAY', label: 'Weekly', validityMonths: 1, priceInPaise: 15000, sortOrder: 0 },
-  { vehicleType: 'BIKE', shiftType: 'DAY', label: 'Monthly', validityMonths: 1, priceInPaise: 40000, sortOrder: 1 },
-  { vehicleType: 'BIKE', shiftType: 'DAY', label: '3-Month', validityMonths: 3, priceInPaise: 100000, sortOrder: 2 },
-  { vehicleType: 'BIKE', shiftType: 'BOTH', label: 'Monthly', validityMonths: 1, priceInPaise: 60000, sortOrder: 3 },
-  { vehicleType: 'CAR', shiftType: 'DAY', label: 'Weekly', validityMonths: 1, priceInPaise: 30000, sortOrder: 0 },
-  { vehicleType: 'CAR', shiftType: 'DAY', label: 'Monthly', validityMonths: 1, priceInPaise: 80000, sortOrder: 1 },
-  { vehicleType: 'CAR', shiftType: 'DAY', label: '3-Month', validityMonths: 3, priceInPaise: 200000, sortOrder: 2 },
-  { vehicleType: 'CAR', shiftType: 'BOTH', label: 'Monthly', validityMonths: 1, priceInPaise: 120000, sortOrder: 3 },
+  { vehicleType: 'BIKE', shiftType: 'DAY', label: 'Weekly', durationUnit: 'DAYS', durationValue: 7, priceInPaise: 15000, sortOrder: 0 },
+  { vehicleType: 'BIKE', shiftType: 'DAY', label: '15-Day', durationUnit: 'DAYS', durationValue: 15, priceInPaise: 25000, sortOrder: 1 },
+  { vehicleType: 'BIKE', shiftType: 'DAY', label: 'Monthly', durationUnit: 'MONTHS', durationValue: 1, priceInPaise: 40000, sortOrder: 2 },
+  { vehicleType: 'BIKE', shiftType: 'DAY', label: '3-Month', durationUnit: 'MONTHS', durationValue: 3, priceInPaise: 100000, sortOrder: 3 },
+  { vehicleType: 'BIKE', shiftType: 'BOTH', label: 'Monthly', durationUnit: 'MONTHS', durationValue: 1, priceInPaise: 60000, sortOrder: 4 },
+  { vehicleType: 'CAR', shiftType: 'DAY', label: 'Weekly', durationUnit: 'DAYS', durationValue: 7, priceInPaise: 30000, sortOrder: 0 },
+  { vehicleType: 'CAR', shiftType: 'DAY', label: '15-Day', durationUnit: 'DAYS', durationValue: 15, priceInPaise: 50000, sortOrder: 1 },
+  { vehicleType: 'CAR', shiftType: 'DAY', label: 'Monthly', durationUnit: 'MONTHS', durationValue: 1, priceInPaise: 80000, sortOrder: 2 },
+  { vehicleType: 'CAR', shiftType: 'DAY', label: '3-Month', durationUnit: 'MONTHS', durationValue: 3, priceInPaise: 200000, sortOrder: 3 },
+  { vehicleType: 'CAR', shiftType: 'BOTH', label: 'Monthly', durationUnit: 'MONTHS', durationValue: 1, priceInPaise: 120000, sortOrder: 4 },
 ];
 
 async function main() {
@@ -158,7 +161,8 @@ async function main() {
           vehicleType: plan.vehicleType,
           shiftType: plan.shiftType,
           label: plan.label,
-          validityMonths: plan.validityMonths,
+          durationUnit: plan.durationUnit,
+          durationValue: plan.durationValue,
           priceInPaise: plan.priceInPaise,
           sortOrder: plan.sortOrder,
         },

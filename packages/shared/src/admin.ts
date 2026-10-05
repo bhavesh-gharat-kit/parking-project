@@ -15,8 +15,11 @@ import { BookingStatusSchema, PaymentMethodSchema, UserRoleSchema, VehicleTypeSc
 import {
   PassBookingSchema,
   PassBookingStatusSchema,
+  PassDurationUnitSchema,
   PassEntrySideSchema,
+  PassHolidayOffDaySchema,
   PassMobileNumberSchema,
+  PassOccupationCategorySchema,
   PassSpecificationSchema,
   PassVehicleCategorySchema,
   PassVehicleNumberSchema,
@@ -219,6 +222,26 @@ function nullableTextSchema(max: number) {
   );
 }
 
+/** Same "empty string clears it" convention as `nullableTextSchema`, for the
+ *  two nullable enum columns the edit form can clear back to "not set". */
+const NullablePassOccupationCategorySchema = z.preprocess(
+  (value) => (typeof value === 'string' && value.trim() === '' ? null : value),
+  PassOccupationCategorySchema.nullable(),
+);
+const NullablePassHolidayOffDaySchema = z.preprocess(
+  (value) => (typeof value === 'string' && value.trim() === '' ? null : value),
+  PassHolidayOffDaySchema.nullable(),
+);
+
+/** `"HH:MM"`, 24-hour, nullable — same clear-on-empty-string convention. */
+const NullableTimeSchema = z.preprocess(
+  (value) => (typeof value === 'string' && value.trim() === '' ? null : value),
+  z
+    .string()
+    .regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Enter a time as HH:MM')
+    .nullable(),
+);
+
 /**
  * `PATCH /api/admin/passes/:id` (D5 point 8, deliverable 4) — the ONE surface
  * for editing a `PassBooking`. Every field the customer could have mis-typed,
@@ -250,23 +273,27 @@ export const AdminPassEditRequestSchema = z
       .min(1, 'Enter an address')
       .max(500, 'Keep it under 500 characters')
       .optional(),
-    occupationCategory: nullableTextSchema(60).optional(),
-    holidayOffDay: nullableTextSchema(20).optional(),
+    occupationCategory: NullablePassOccupationCategorySchema.optional(),
+    occupationOther: nullableTextSchema(60).optional(),
+    holidayOffDay: NullablePassHolidayOffDaySchema.optional(),
+    holidayOffDayOther: nullableTextSchema(20).optional(),
     helmet: z.boolean().optional(),
     locker: z.boolean().optional(),
     airCheck: z.boolean().optional(),
     rickshawParking: z.boolean().optional(),
     renewalReference: nullableTextSchema(120).optional(),
+    expectedParkingDays: z.preprocess(
+      (value) => (value === '' ? null : value),
+      z.coerce.number().int().min(1).max(31).nullable(),
+    ).optional(),
+    entryTime: NullableTimeSchema.optional(),
+    exitTime: NullableTimeSchema.optional(),
     specification: PassSpecificationSchema.nullable().optional(),
     entrySide: PassEntrySideSchema.nullable().optional(),
     planLabel: z.string().trim().min(1, 'Enter a label').max(40, 'Keep it under 40 characters').optional(),
     shiftType: ShiftTypeSchema.optional(),
-    validityMonths: z.coerce
-      .number()
-      .int('Whole months only')
-      .positive('Validity must be at least 1 month')
-      .max(24, 'Keep it to 24 months or less')
-      .optional(),
+    durationUnit: PassDurationUnitSchema.optional(),
+    durationValue: z.coerce.number().int('Whole numbers only').positive('Must be at least 1').optional(),
     amountInPaise: z.coerce
       .number()
       .int('Whole paise only')

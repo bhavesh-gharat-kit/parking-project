@@ -15,6 +15,8 @@ import { PaymentMethodSchema } from './enums';
 import {
   PassBookingStatusSchema,
   PassEntrySideSchema,
+  PassHolidayOffDaySchema,
+  PassOccupationCategorySchema,
   PassSpecificationSchema,
   PassVehicleCategorySchema,
   ShiftTypeSchema,
@@ -52,11 +54,12 @@ export const PassDocumentSchema = z.object({
   /** Field 12 प्रवेश मार्ग — `null` until an admin sets it. */
   entrySide: PassEntrySideSchema.nullable(),
 
-  /** Field 13 — free text (D5 point 5), matched against the printed icons on
-   *  a best-effort basis by the page itself; never re-interpreted here. */
-  occupationCategory: z.string().nullable(),
-  /** Field 8's सुट्टीचे दिवस checkboxes — same free-text caveat. */
-  holidayOffDay: z.string().nullable(),
+  /** Field 13 व्यवसाय. `OTHER` pairs with `occupationOther`'s free text. */
+  occupationCategory: PassOccupationCategorySchema.nullable(),
+  occupationOther: z.string().nullable(),
+  /** Field 8's सुट्टीचे दिवस checkboxes. `OTHER` pairs with `holidayOffDayOther`. */
+  holidayOffDay: PassHolidayOffDaySchema.nullable(),
+  holidayOffDayOther: z.string().nullable(),
   /** Field 11 सुविधा checkboxes. */
   helmet: z.boolean(),
   locker: z.boolean(),
@@ -64,6 +67,11 @@ export const PassDocumentSchema = z.object({
   rickshawParking: z.boolean(),
   /** Field 9's जुना पास tick + खेप box. */
   renewalReference: z.string().nullable(),
+  /** Field 8's "महिन्यातून एकूण ___ दिवस पार्किंग" blank. */
+  expectedParkingDays: z.number().nullable(),
+  /** Field 2's येण्याची वेळ / जाण्याची वेळ blanks, `"HH:MM"`. */
+  entryTime: z.string().nullable(),
+  exitTime: z.string().nullable(),
 
   /** Field 10 पास दिनांक / वैधता. */
   startDate: z.string(),

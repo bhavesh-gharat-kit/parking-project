@@ -6,6 +6,7 @@ import { useCallback, useEffect, useState } from 'react';
 
 import {
   formatInr,
+  formatPassDuration,
   SHIFT_TYPE_LABELS,
   VEHICLE_TYPE_LABELS,
   type AdminParkingLocation,
@@ -62,7 +63,8 @@ export default function AdminPassPlansPage() {
             vehicleType: plan.vehicleType,
             shiftType: plan.shiftType,
             label: plan.label,
-            validityMonths: plan.validityMonths,
+            durationUnit: plan.durationUnit,
+            durationValue: plan.durationValue,
             priceInRupees: plan.priceInPaise / 100,
             sortOrder: plan.sortOrder,
             isActive: true,
@@ -97,7 +99,7 @@ export default function AdminPassPlansPage() {
                 <Pill label={plan.isActive ? 'Active' : 'Retired'} tone={plan.isActive ? 'done' : 'bad'} />
               </div>
               <p className="text-small text-secondary">
-                {formatInr(plan.priceInPaise)} · {plan.validityMonths} {plan.validityMonths === 1 ? 'month' : 'months'}
+                {formatInr(plan.priceInPaise)} · {formatPassDuration(plan.durationUnit, plan.durationValue)}
               </p>
             </div>
             <div className="btn-row">

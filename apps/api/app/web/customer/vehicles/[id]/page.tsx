@@ -10,7 +10,7 @@ import { Field } from '../../../_components/Field';
 import { apiRequest, errorMessage } from '../../../_lib/api';
 import { applyApiError, safeParseForm, type FieldErrors } from '../../../_lib/validation';
 
-const EMPTY = { number: '', type: 'CAR' as VehicleType, makeModel: '' };
+const EMPTY = { number: '', type: 'BIKE' as VehicleType, makeModel: '' };
 
 export default function VehicleFormPage() {
   const { id } = useParams<{ id: string }>();
