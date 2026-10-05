@@ -265,6 +265,13 @@ export default function PassDocumentPage() {
           <Row n={14} label="यु. टी. आर. क्रमांक :">
             <Boxes value={doc.upiUtr ?? ''} length={16} />
           </Row>
+
+          
+          <div className="pass-receipt-row">
+            <span></span>
+            <span>T & C मागे पहा</span>
+          </div>
+          
         </section>
 
         {/* ── Page 2 — the 13-point instructions, nothing else (D5) ──── */}
