@@ -81,9 +81,15 @@ export default function PassesListPage() {
 }
 
 function PassCard({ pass }: { pass: PassBooking }) {
+  const confirmed = pass.status === 'CONFIRMED';
+  const expired = isPassExpired(pass.endDate);
+
   return (
-    <Link href={`/web/customer/passes/${pass.id}`} className="card-link">
-      <div className="card">
+    // A nested <a> inside <a> is invalid HTML, so the card-to-detail link and
+    // the "View pass" link are siblings here, not parent/child, even though
+    // they sit inside one visual card (same pattern as the bookings list).
+    <div className="card">
+      <Link href={`/web/customer/passes/${pass.id}`} className="card-click-area">
         <div className="card-header-row">
           <p className="text-small-bold">{pass.passNumber}</p>
           <p className="text-small-bold text-primary">{formatInr(pass.amountInPaise)}</p>
@@ -95,14 +101,24 @@ function PassCard({ pass }: { pass: PassBooking }) {
           {formatIstDate(pass.startDate)} – {formatIstDate(pass.endDate)}
         </p>
         <div className="card-header-row">
-          <PassStatusPill status={pass.status} />
+          <span className="chip-row" style={{ gap: 'var(--space-1)' }}>
+            <PassStatusPill status={pass.status} />
+            {confirmed ? (
+              <span className={`pill ${expired ? 'pill-bad' : 'pill-done'}`}>{expired ? 'Expired' : 'Active'}</span>
+            ) : null}
+          </span>
           {pass.payment ? (
             <span className="text-small text-secondary">
               Payment: {PAYMENT_STATUS_LABELS[pass.payment.status]}
             </span>
           ) : null}
         </div>
-      </div>
-    </Link>
+      </Link>
+      {confirmed ? (
+        <Link href={`/web/customer/passes/${pass.id}/pass`} className="text-small text-primary">
+          View pass / Download
+        </Link>
+      ) : null}
+    </div>
   );
 }

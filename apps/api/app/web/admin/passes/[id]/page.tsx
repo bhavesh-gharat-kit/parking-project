@@ -1,6 +1,7 @@
 'use client';
 
 import Image from 'next/image';
+import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
 
@@ -331,6 +332,11 @@ export default function AdminPassDetailPage() {
         <p className="text-small text-secondary">Pass number</p>
         <p className="text-subtitle">{passBooking.passNumber}</p>
         <PassStatusPill status={passBooking.status} large />
+        {passBooking.status === 'CONFIRMED' ? (
+          <Link href={`/web/customer/passes/${id}/pass`} className="btn btn-secondary">
+            View / print pass document
+          </Link>
+        ) : null}
       </div>
 
       {passBooking.payment?.upiUtr || passBooking.payment?.utrScreenshotUrl ? (

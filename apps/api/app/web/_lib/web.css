@@ -631,6 +631,243 @@
   border-top: 1px solid var(--color-border);
 }
 
+/* ── Printable pass document (Phase 22, `_/by-client/pass-photo.jpeg`) ─── */
+
+.pass-doc {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.pass-page {
+  --pass-ink: #0b3d6e;
+  background: #ffffff;
+  color: var(--pass-ink);
+  border: 2px solid var(--pass-ink);
+  border-radius: var(--radius-control);
+  max-width: 720px;
+  margin: 0 auto;
+  width: 100%;
+  font-size: 0.72rem;
+  line-height: 1.25;
+}
+
+.pass-header {
+  border-bottom: 2px solid var(--pass-ink);
+}
+
+.pass-header-top {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3) 0;
+}
+
+.pass-crest {
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 2px solid var(--pass-ink);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 1.1rem;
+}
+
+.pass-header-text {
+  flex: 1;
+  text-align: center;
+}
+
+.pass-header-title {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 800;
+}
+
+.pass-header-subtitle {
+  margin: 0;
+  font-size: 0.68rem;
+}
+
+.pass-parking-badge {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.3em;
+  border: 1.5px solid var(--pass-ink);
+  border-radius: 4px;
+  padding: 0.2em 0.4em;
+  font-size: 0.6rem;
+  font-weight: 700;
+  text-align: left;
+}
+
+.pass-parking-badge span {
+  font-size: 1.1rem;
+  font-weight: 800;
+}
+
+.pass-header-bottom {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-3) var(--space-2);
+}
+
+.pass-header-form-title {
+  margin: 0;
+  font-weight: 800;
+  font-size: 0.95rem;
+  border: 1.5px solid var(--pass-ink);
+  padding: 0.15em 0.6em;
+}
+
+.pass-service-badge {
+  background: var(--pass-ink);
+  color: #ffffff;
+  font-weight: 700;
+  padding: 0.25em 0.6em;
+  border-radius: 3px;
+  font-size: 0.68rem;
+}
+
+.pass-receipt-row {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-3);
+  border-bottom: 1.5px solid var(--pass-ink);
+  font-weight: 700;
+}
+
+.pass-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 0.35em var(--space-3);
+  border-bottom: 1px solid var(--pass-ink);
+}
+
+.pass-row-num {
+  flex-shrink: 0;
+  font-weight: 800;
+  width: 1.1em;
+}
+
+.pass-row-label {
+  flex-shrink: 0;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.pass-row-body {
+  flex: 1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+}
+
+.pass-boxes {
+  display: flex;
+  gap: 2px;
+}
+
+.pass-box {
+  width: 1.1em;
+  height: 1.3em;
+  border: 1px solid var(--pass-ink);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.pass-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3em;
+  white-space: nowrap;
+}
+
+.pass-check-box {
+  width: 0.9em;
+  height: 0.9em;
+  border: 1.5px solid var(--pass-ink);
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 0.75em;
+}
+
+.pass-check.checked .pass-check-box {
+  background: var(--pass-ink);
+  color: #ffffff;
+}
+
+.pass-value-text {
+  flex: 1;
+  min-width: 80px;
+  border-bottom: 1px solid var(--pass-ink);
+  padding: 0 0.2em;
+}
+
+.pass-entry-row {
+  display: flex;
+  gap: var(--space-3);
+  flex: 1;
+}
+
+.pass-entry-option {
+  flex: 1;
+  text-align: center;
+  border: 1.5px solid var(--pass-ink);
+  border-radius: 3px;
+  padding: 0.2em 0.4em;
+  font-weight: 700;
+}
+
+.pass-entry-option.active {
+  background: var(--pass-ink);
+  color: #ffffff;
+}
+
+.pass-instructions {
+  padding: var(--space-3);
+}
+
+.pass-instructions h2 {
+  margin: 0 0 var(--space-2);
+  font-size: 1rem;
+}
+
+.pass-instructions-list {
+  margin: 0;
+  padding-left: 1.4em;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6em;
+}
+
+@media print {
+  .pass-page {
+    border-width: 1.5px;
+    max-width: none;
+    break-inside: avoid;
+  }
+
+  .pass-page + .pass-page {
+    break-before: page;
+  }
+}
+
 @media print {
   .web-nav,
   .install-banner,
