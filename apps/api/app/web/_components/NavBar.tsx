@@ -12,9 +12,8 @@ type NavLink = { href: string; label: string };
 
 const CUSTOMER_LINKS: NavLink[] = [
   { href: '/web/customer', label: 'Home' },
-  { href: '/web/customer/book', label: 'Book parking' },
-  { href: '/web/customer/bookings', label: 'My bookings' },
   { href: '/web/customer/passes', label: 'My passes' },
+  { href: '/web/customer/book', label: 'Book parking' },
   { href: '/web/customer/vehicles', label: 'My vehicles' },
   { href: '/web/customer/profile', label: 'Profile' },
 ];

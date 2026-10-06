@@ -152,6 +152,9 @@ export default function PassSummaryPage() {
           <Link href={`/web/customer/passes/${passBooking.id}/upi`} className="btn btn-primary btn-block">
             Pay via UPI
           </Link>
+          <Link href={`/web/customer/passes/${passBooking.id}/payment`} className="btn btn-secondary btn-block">
+            Change payment method
+          </Link>
         </>
       ) : null}
 
@@ -163,10 +166,15 @@ export default function PassSummaryPage() {
       ) : null}
 
       {passBooking.status === 'PENDING_APPROVAL' ? (
-        <p className="text-small text-secondary">
-          Pay the amount in cash at the parking location. An admin will confirm your pass once
-          payment is received.
-        </p>
+        <>
+          <p className="text-small text-secondary">
+            Pay the amount in cash at the parking location. An admin will confirm your pass once
+            payment is received.
+          </p>
+          <Link href={`/web/customer/passes/${passBooking.id}/payment`} className="btn btn-secondary btn-block">
+            Change payment method
+          </Link>
+        </>
       ) : null}
 
       <button type="button" className="btn btn-ghost" onClick={() => router.replace('/web/customer/passes')}>

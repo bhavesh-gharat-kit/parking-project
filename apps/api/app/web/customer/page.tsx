@@ -14,17 +14,14 @@ export default async function CustomerHomePage() {
       </div>
 
       <div className="stack">
-        <Link href="/web/customer/book" className="btn btn-primary btn-block">
-          Book parking
+        <Link href="/web/customer/passes/new" className="btn btn-primary btn-block">
+          Book Pass
         </Link>
-        <Link href="/web/customer/bookings" className="btn btn-secondary btn-block">
-          My bookings
+        <Link href="/web/customer/passes" className="btn btn-secondary btn-block">
+          My Passes
         </Link>
         <Link href="/web/customer/vehicles" className="btn btn-secondary btn-block">
           My vehicles
-        </Link>
-        <Link href="/web/customer/profile" className="btn btn-secondary btn-block">
-          My profile
         </Link>
       </div>
 

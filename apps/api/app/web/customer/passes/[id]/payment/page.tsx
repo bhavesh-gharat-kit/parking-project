@@ -28,7 +28,14 @@ export default function ChoosePassPaymentMethodPage() {
     try {
       const data = await apiRequest<PassBooking>(`/api/passes/${id}`);
       setPassBooking(data);
-      if (data.status !== 'PENDING') router.replace(`/web/customer/passes/${id}`);
+      // The method stays changeable through `PENDING_PAYMENT` (UPI, QR not
+      // yet paid) and `PENDING_APPROVAL` (cash, not yet confirmed) — only
+      // past that (a UTR submitted, or the application decided) is it locked.
+      if (data.status !== 'PENDING' && data.status !== 'PENDING_PAYMENT' && data.status !== 'PENDING_APPROVAL') {
+        router.replace(`/web/customer/passes/${id}`);
+      } else {
+        setSelected((current) => current ?? data.paymentMethod);
+      }
     } catch (error) {
       setLoadError(errorMessage(error, 'Could not load this pass application.'));
     }
@@ -77,10 +84,17 @@ export default function ChoosePassPaymentMethodPage() {
     );
   }
 
+  const alreadyChosen = passBooking.paymentMethod !== null;
+
   return (
     <div className="stack-loose">
-      <h1 className="text-heading">Choose payment method</h1>
+      <h1 className="text-heading">{alreadyChosen ? 'Change payment method' : 'Choose payment method'}</h1>
       <p className="text-small text-secondary">Amount to pay: {formatInr(passBooking.amountInPaise)}</p>
+      {alreadyChosen ? (
+        <p className="text-small text-secondary">
+          You can still switch methods — nothing is final until payment is verified.
+        </p>
+      ) : null}
 
       <div className="stack">
         {METHODS.map(({ method, description }) => (

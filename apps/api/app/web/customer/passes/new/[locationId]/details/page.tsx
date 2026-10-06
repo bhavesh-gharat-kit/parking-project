@@ -108,7 +108,7 @@ export default function NewPassDetailsPage() {
           className="btn btn-primary btn-block"
           onClick={() => router.replace(`/web/customer/passes/new/${locationId}`)}
         >
-          Choose vehicle &amp; shift
+          Choose a plan
         </button>
       </div>
     );

@@ -250,12 +250,15 @@ export type AdminPassPlan = z.infer<typeof AdminPassPlanSchema>;
 export const PASS_BOOKING_TRANSITIONS = {
   /** Created. Phase 20 routes it by payment method. */
   PENDING: ['PENDING_PAYMENT', 'PENDING_APPROVAL', 'CANCELLED'],
-  /** UPI chosen, QR shown. */
-  PENDING_PAYMENT: ['PAYMENT_VERIFICATION', 'CANCELLED'],
-  /** UTR submitted; only an admin moves it from here (§32 lineage). */
+  /** UPI chosen, QR shown. The customer may still switch to cash — see
+   *  `PENDING_APPROVAL` below — until a UTR is actually submitted. */
+  PENDING_PAYMENT: ['PAYMENT_VERIFICATION', 'PENDING_APPROVAL', 'CANCELLED'],
+  /** UTR submitted; only an admin moves it from here (§32 lineage). The
+   *  payment method is locked from this point on. */
   PAYMENT_VERIFICATION: ['CONFIRMED', 'REJECTED'],
-  /** Cash chosen, waiting for the admin. */
-  PENDING_APPROVAL: ['CONFIRMED', 'REJECTED', 'CANCELLED'],
+  /** Cash chosen, waiting for the admin. The customer may still switch to
+   *  UPI — mirrors `PENDING_PAYMENT` above — until an admin decides. */
+  PENDING_APPROVAL: ['CONFIRMED', 'REJECTED', 'CANCELLED', 'PENDING_PAYMENT'],
   CONFIRMED: [],
   REJECTED: [],
   CANCELLED: [],
@@ -402,7 +405,7 @@ export const PassBookingLocationSchema = z.object({
 
 /**
  * A pass application as the customer's app sees it — the snapshot columns
- * (`planLabel`, `vehicleType`, `shiftType`, `validityMonths`,
+ * (`planLabel`, `vehicleType`, `shiftType`, `durationUnit`, `durationValue`,
  * `amountInPaise`) plus the free-text application fields, never a join out to
  * the live `PassPlan` (D5 point 2, same reasoning as `BookingSchema`).
  *

@@ -36,8 +36,6 @@ import {
   type AdminPassStatusEvent,
   type PassBookingStatus,
   type PassEntrySide,
-  type PassHolidayOffDay,
-  type PassOccupationCategory,
   type PassSpecification,
   type PassVehicleCategory,
   type ShiftType,

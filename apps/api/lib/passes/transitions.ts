@@ -198,6 +198,12 @@ export async function transitionPassBooking(
         where: { id: current.payment.id },
         data: {
           status: payment.to,
+          // A method switch (UPI ↔ cash, see `PASS_BOOKING_TRANSITIONS`)
+          // reuses `payment.create`'s fields on an existing row instead of
+          // creating a new one — there's no payment to preserve yet.
+          ...(payment.create
+            ? { method: payment.create.method, upiPayeeVpa: payment.create.upiPayeeVpa ?? null }
+            : {}),
           ...(payment.upiUtr ? { upiUtr: payment.upiUtr, utrSubmittedAt: now } : {}),
           ...(payment.utrScreenshotUrl ? { utrScreenshotUrl: payment.utrScreenshotUrl } : {}),
           ...(payment.to === 'PAID' ? { paidAt: payment.paidAt ?? now } : {}),

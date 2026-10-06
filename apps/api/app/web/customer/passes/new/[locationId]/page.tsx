@@ -1,80 +1,129 @@
 'use client';
 
 import { useParams, useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import {
   SHIFT_TYPES,
   SHIFT_TYPE_LABELS,
-  VEHICLE_TYPES,
-  VEHICLE_TYPE_LABELS,
-  type ShiftType,
-  type VehicleType,
+  formatInr,
+  formatPassDuration,
+  type PassPlan,
 } from '@parking/shared';
 
-// "Other" has no shift/price tiers in the pass plan matrix (D5 point 2 —
-// the matrix is vehicle type × shift type); daily packages offer it but
-// passes don't need to.
-const PASS_VEHICLE_TYPES = VEHICLE_TYPES.filter((type) => type !== 'OTHER');
+import { Banner } from '../../../../_components/Banner';
+import { apiRequest, errorMessage } from '../../../../_lib/api';
 
-export default function NewPassVehicleShiftPage() {
+// Only bike parking is offered — no vehicle-type step (`VEHICLE_TYPES` has
+// `CAR`/`OTHER` too, but no pass plans are sold for them at any location).
+const VEHICLE_TYPE = 'BIKE';
+
+const SHIFT_FILTERS = ['ALL', ...SHIFT_TYPES] as const;
+type ShiftFilter = (typeof SHIFT_FILTERS)[number];
+
+const SHIFT_FILTER_LABELS: Record<ShiftFilter, string> = {
+  ALL: 'All',
+  ...SHIFT_TYPE_LABELS,
+};
+
+export default function NewPassPlanPage() {
   const { locationId } = useParams<{ locationId: string }>();
   const router = useRouter();
 
-  const [vehicleType, setVehicleType] = useState<VehicleType | null>(null);
-  const [shiftType, setShiftType] = useState<ShiftType | null>(null);
+  const [plans, setPlans] = useState<PassPlan[] | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [shiftFilter, setShiftFilter] = useState<ShiftFilter>('ALL');
+  const [planId, setPlanId] = useState<string | null>(null);
 
-  const continueToPlans = () => {
-    if (!vehicleType || !shiftType) return;
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const items = await apiRequest<PassPlan[]>(
+          `/api/locations/${locationId}/pass-plans?vehicleType=${VEHICLE_TYPE}`,
+        );
+        if (!cancelled) setPlans(items);
+      } catch (error) {
+        if (!cancelled) setLoadError(errorMessage(error, 'Could not load pass plans.'));
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [locationId]);
+
+  const visiblePlans = (plans ?? []).filter(
+    (plan) => shiftFilter === 'ALL' || plan.shiftType === shiftFilter,
+  );
+  const selectedPlan = visiblePlans.find((plan) => plan.id === planId) ?? null;
+
+  const continueToDetails = () => {
+    if (!selectedPlan) return;
     router.push(
-      `/web/customer/passes/new/${locationId}/plan?vehicleType=${vehicleType}&shiftType=${shiftType}`,
+      `/web/customer/passes/new/${locationId}/details?passPlanId=${selectedPlan.id}` +
+        `&vehicleType=${VEHICLE_TYPE}`,
     );
   };
 
   return (
     <div className="stack-loose">
-      <h1 className="text-heading">Vehicle &amp; shift</h1>
-      <p className="text-small text-secondary">Pass plans are priced per vehicle type and shift.</p>
+      <h1 className="text-heading">Choose a plan</h1>
+      <p className="text-small text-secondary">Bike parking plans at this location.</p>
 
-      <div className="field">
-        <span className="field-label">Vehicle type</span>
-        <div className="chip-row">
-          {PASS_VEHICLE_TYPES.map((type) => (
-            <button
-              key={type}
-              type="button"
-              className={`chip${vehicleType === type ? ' selected' : ''}`}
-              onClick={() => setVehicleType(type)}
-            >
-              {VEHICLE_TYPE_LABELS[type]}
-            </button>
-          ))}
-        </div>
+      <div className="chip-row">
+        {SHIFT_FILTERS.map((filter) => (
+          <button
+            key={filter}
+            type="button"
+            className={`chip${shiftFilter === filter ? ' selected' : ''}`}
+            onClick={() => {
+              setShiftFilter(filter);
+              setPlanId(null);
+            }}
+          >
+            {SHIFT_FILTER_LABELS[filter]}
+          </button>
+        ))}
       </div>
 
-      <div className="field">
-        <span className="field-label">Shift</span>
-        <div className="chip-row">
-          {SHIFT_TYPES.map((shift) => (
+      {plans === null && !loadError ? (
+        <div className="loading-center">Loading…</div>
+      ) : (
+        <div className="stack">
+          {visiblePlans.map((plan) => (
             <button
-              key={shift}
+              key={plan.id}
               type="button"
-              className={`chip${shiftType === shift ? ' selected' : ''}`}
-              onClick={() => setShiftType(shift)}
+              className="card-link"
+              style={{ border: 'none', background: 'none', padding: 0, textAlign: 'left', cursor: 'pointer', width: '100%' }}
+              onClick={() => setPlanId(plan.id)}
             >
-              {SHIFT_TYPE_LABELS[shift]}
+              <div className={`card plan-card${planId === plan.id ? ' card-selected' : ''}`}>
+                <div className="plan-card-top">
+                  <p className="text-small-bold">{plan.label}</p>
+                  <p className="plan-card-price">{formatInr(plan.priceInPaise)}</p>
+                </div>
+                <p className="text-small text-secondary">
+                  Valid {formatPassDuration(plan.durationUnit, plan.durationValue)}
+                </p>
+              </div>
             </button>
           ))}
+          {plans !== null && visiblePlans.length === 0 ? (
+            <div className="empty-state">No bike pass plans for this filter yet.</div>
+          ) : null}
         </div>
-      </div>
+      )}
+
+      {loadError ? <Banner kind="danger">{loadError}</Banner> : null}
 
       <button
         type="button"
         className="btn btn-primary btn-block"
-        disabled={!vehicleType || !shiftType}
-        onClick={continueToPlans}
+        disabled={!selectedPlan}
+        onClick={continueToDetails}
       >
-        Continue
+        {selectedPlan ? `Continue · ${selectedPlan.label} · ${formatInr(selectedPlan.priceInPaise)}` : 'Choose a plan to continue'}
       </button>
     </div>
   );

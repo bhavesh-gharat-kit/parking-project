@@ -262,6 +262,33 @@
   background: var(--color-bg-selected);
 }
 
+/* ── Pass plan cards (customer booking flow) ────────────────────────── */
+
+.plan-card {
+  border: 1px solid var(--color-border);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+}
+
+.plan-card-top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.plan-card-price {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--color-primary);
+  white-space: nowrap;
+  margin: 0;
+}
+
+.plan-card.card-selected {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 1px var(--color-primary);
+}
+
 .card-row {
   display: flex;
   align-items: flex-start;

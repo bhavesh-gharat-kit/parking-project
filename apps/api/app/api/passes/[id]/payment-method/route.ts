@@ -1,14 +1,16 @@
 /**
  * POST /api/passes/:id/payment-method — the customer picks `UPI` or `CASH`
- * for a pass application (`_/decisions.md` D5, Phase 20). Mirrors
- * `app/api/bookings/[id]/payment-method/route.ts` exactly, retargeted at
+ * for a pass application (`_/decisions.md` D5, Phase 20). Loosely mirrors
+ * `app/api/bookings/[id]/payment-method/route.ts`, retargeted at
  * `PassBooking`/`PassPayment`.
  *
- * Only legal while the application is still `PENDING`; `transitionPassBooking`'s
- * table sends it to `PENDING_PAYMENT` (UPI) or `PENDING_APPROVAL` (CASH) and
- * nowhere else. No pass-specific UPI config exists — the location's existing
- * `upiVpa`/`upiQrImageUrl` is reused as-is (D5 — "no pass-specific UPI
- * config").
+ * Legal from `PENDING` (first choice) and also from `PENDING_PAYMENT`/
+ * `PENDING_APPROVAL` (the customer changing their mind before actually
+ * paying) — `transitionPassBooking`'s table sends it to `PENDING_PAYMENT`
+ * (UPI) or `PENDING_APPROVAL` (CASH) and nowhere else. Once a UTR is
+ * submitted (`PAYMENT_VERIFICATION`) the method is locked. No pass-specific
+ * UPI config exists — the location's existing `upiVpa`/`upiQrImageUrl` is
+ * reused as-is (D5 — "no pass-specific UPI config").
  */
 import type { NextRequest } from 'next/server';
 
@@ -16,7 +18,7 @@ import { BookingPaymentMethodRequestSchema } from '@parking/shared';
 
 import { requireUser } from '@/lib/auth/guard';
 import { parseJsonBody } from '@/lib/auth/route-helpers';
-import { toPassBooking } from '@/lib/passes/projection';
+import { PASS_RELATIONS, toPassBooking } from '@/lib/passes/projection';
 import { passTransitionFailureMessage, transitionPassBooking } from '@/lib/passes/transitions';
 import { prisma } from '@/lib/db';
 import { fail, ok } from '@/lib/http';
@@ -40,6 +42,8 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
     where: { id, userId: auth.actor.userId },
     select: {
       id: true,
+      status: true,
+      paymentMethod: true,
       amountInPaise: true,
       location: { select: { upiVpa: true } },
     },
@@ -47,6 +51,17 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
   if (!passBooking) return fail('NOT_FOUND', 'That pass application could not be found.');
 
   const { method } = body.data;
+  const editableStatuses: readonly typeof passBooking.status[] = ['PENDING_PAYMENT', 'PENDING_APPROVAL'];
+
+  // Reselecting the method already in effect is a no-op, not a transition —
+  // `PASS_BOOKING_TRANSITIONS` has no self-loop for either intermediate status.
+  if (passBooking.paymentMethod === method && editableStatuses.includes(passBooking.status)) {
+    const current = await prisma.passBooking.findUniqueOrThrow({
+      where: { id: passBooking.id },
+      include: PASS_RELATIONS,
+    });
+    return ok(toPassBooking(current), { headers: { 'Cache-Control': 'no-store' } });
+  }
 
   const upiPayeeVpa =
     method === 'UPI' ? (passBooking.location.upiVpa ?? (await getGlobalUpiVpa())) : null;
@@ -54,7 +69,7 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
   const result = await transitionPassBooking({
     passBookingId: passBooking.id,
     to: method === 'UPI' ? 'PENDING_PAYMENT' : 'PENDING_APPROVAL',
-    allowedFrom: ['PENDING'],
+    allowedFrom: ['PENDING', 'PENDING_PAYMENT', 'PENDING_APPROVAL'],
     actor: { userId: auth.actor.userId, role: auth.actor.role },
     note: `Payment method selected: ${method}`,
     data: { paymentMethod: method },
