@@ -783,6 +783,9 @@ model PassBooking {
 
   /// D5 point 4 — cosmetic only; never read by pricing/validity logic.
   vehicleCategory PassVehicleCategory
+  /// Free text for `vehicleCategory = OTHER`, same pattern as
+  /// `occupationOther`/`holidayOffDayOther` below.
+  vehicleCategoryOther String? @db.VarChar(60)
 
   // ─────────────────────────────────────────────────────────────────────────
   //  INFORMATIONAL (D5 point 5) — customer-entered, admin-editable, never read

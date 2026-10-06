@@ -266,6 +266,7 @@ export const AdminPassEditRequestSchema = z
     vehicleNumber: PassVehicleNumberSchema.optional(),
     vehicleType: VehicleTypeSchema.optional(),
     vehicleCategory: PassVehicleCategorySchema.optional(),
+    vehicleCategoryOther: nullableTextSchema(60).optional(),
     mobileNumber: PassMobileNumberSchema.optional(),
     address: z
       .string()

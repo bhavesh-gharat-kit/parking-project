@@ -76,6 +76,7 @@ export function toPassBooking(row: PassBookingWithRelations): PassBooking {
 
     vehicleNumber: row.vehicleNumber,
     vehicleCategory: row.vehicleCategory,
+    vehicleCategoryOther: row.vehicleCategoryOther,
     mobileNumber: row.mobileNumber,
     address: row.address,
 

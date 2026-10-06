@@ -357,6 +357,8 @@ export const PassCreateRequestSchema = z.object({
   vehicleNumber: PassVehicleNumberSchema,
   vehicleType: VehicleTypeSchema,
   vehicleCategory: PassVehicleCategorySchema,
+  /** Free text for `vehicleCategory = 'OTHER'`, same convention as `occupationOther`. */
+  vehicleCategoryOther: optionalTextSchema(60),
   mobileNumber: PassMobileNumberSchema,
   address: z.string().trim().min(1, 'Enter an address').max(500, 'Keep it under 500 characters'),
   /** D5 point 5 — informational only, never read by pricing/validity/eligibility logic. */
@@ -435,6 +437,7 @@ export const PassBookingSchema = z.object({
 
   vehicleNumber: z.string(),
   vehicleCategory: PassVehicleCategorySchema,
+  vehicleCategoryOther: z.string().nullable(),
   mobileNumber: z.string(),
   address: z.string(),
 

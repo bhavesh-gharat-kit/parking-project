@@ -86,7 +86,13 @@ export default function PassSummaryPage() {
     { label: 'Location', value: `${passBooking.location.name}, ${passBooking.location.city}` },
     { label: 'Address', value: passBooking.location.addressLine },
     { label: 'Vehicle number', value: passBooking.vehicleNumber },
-    { label: 'Vehicle category', value: PASS_VEHICLE_CATEGORY_LABELS[passBooking.vehicleCategory] },
+    {
+      label: 'Vehicle category',
+      value:
+        passBooking.vehicleCategory === 'OTHER' && passBooking.vehicleCategoryOther
+          ? passBooking.vehicleCategoryOther
+          : PASS_VEHICLE_CATEGORY_LABELS[passBooking.vehicleCategory],
+    },
     { label: 'Vehicle type', value: VEHICLE_TYPE_LABELS[passBooking.vehicleType] },
     { label: 'Shift', value: SHIFT_TYPE_LABELS[passBooking.shiftType] },
     { label: 'Plan', value: passBooking.planLabel },

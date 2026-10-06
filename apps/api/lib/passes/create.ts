@@ -62,6 +62,7 @@ export async function createPassBooking(input: CreatePassInput): Promise<CreateP
     vehicleNumber,
     vehicleType,
     vehicleCategory,
+    vehicleCategoryOther,
     mobileNumber,
     address,
     occupationCategory,
@@ -139,6 +140,7 @@ export async function createPassBooking(input: CreatePassInput): Promise<CreateP
         mobileNumber,
         address,
         vehicleCategory,
+        vehicleCategoryOther: vehicleCategory === 'OTHER' ? (vehicleCategoryOther ?? null) : null,
 
         // ── informational only (D5 point 5) ──
         occupationCategory: occupationCategory ?? null,

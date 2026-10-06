@@ -10,8 +10,6 @@ import {
   PassPlanRequestSchema,
   SHIFT_TYPES,
   SHIFT_TYPE_LABELS,
-  VEHICLE_TYPES,
-  VEHICLE_TYPE_LABELS,
   type AdminPassPlan,
   type PassDurationUnit,
   type ShiftType,
@@ -124,22 +122,6 @@ export default function AdminPassPlanFormPage() {
       {formError ? <Banner kind="danger">{formError}</Banner> : null}
 
       <form className="stack" onSubmit={onSubmit}>
-        <div className="field">
-          <span className="field-label">Vehicle type</span>
-          <div className="chip-row">
-            {VEHICLE_TYPES.map((type) => (
-              <button
-                key={type}
-                type="button"
-                className={`chip${values.vehicleType === type ? ' selected' : ''}`}
-                onClick={() => setValues((current) => ({ ...current, vehicleType: type }))}
-              >
-                {VEHICLE_TYPE_LABELS[type]}
-              </button>
-            ))}
-          </div>
-        </div>
-
         <div className="field">
           <span className="field-label">Shift</span>
           <div className="chip-row">

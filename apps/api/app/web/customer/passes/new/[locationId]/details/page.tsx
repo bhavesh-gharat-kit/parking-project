@@ -26,9 +26,16 @@ import { Field } from '../../../../../_components/Field';
 import { apiRequest } from '../../../../../_lib/api';
 import { applyApiError, safeParseForm, type FieldErrors } from '../../../../../_lib/validation';
 
+// Only bike parking is offered — no car/rickshaw vehicle categories
+// (`PASS_VEHICLE_CATEGORIES` has them too, for the admin's historical data).
+const BIKE_VEHICLE_CATEGORIES = PASS_VEHICLE_CATEGORIES.filter(
+  (category) => category !== 'CAR' && category !== 'RICKSHAW',
+);
+
 const EMPTY = {
   vehicleNumber: '',
   vehicleCategory: null as PassVehicleCategory | null,
+  vehicleCategoryOther: '',
   mobileNumber: '',
   address: '',
   occupationCategory: null as PassOccupationCategory | null,
@@ -176,7 +183,7 @@ export default function NewPassDetailsPage() {
         <div className="field">
           <span className="field-label">Vehicle category</span>
           <div className="chip-row">
-            {PASS_VEHICLE_CATEGORIES.map((category) => (
+            {BIKE_VEHICLE_CATEGORIES.map((category) => (
               <button
                 key={category}
                 type="button"
@@ -188,6 +195,16 @@ export default function NewPassDetailsPage() {
             ))}
           </div>
           {fieldErrors.vehicleCategory ? <span className="field-error">{fieldErrors.vehicleCategory}</span> : null}
+          {values.vehicleCategory === 'OTHER' ? (
+            <Field label="Specify vehicle" htmlFor="vehicleCategoryOther" error={fieldErrors.vehicleCategoryOther}>
+              <input
+                id="vehicleCategoryOther"
+                className={`input${fieldErrors.vehicleCategoryOther ? ' has-error' : ''}`}
+                value={values.vehicleCategoryOther}
+                onChange={(event) => setValues((current) => ({ ...current, vehicleCategoryOther: event.target.value }))}
+              />
+            </Field>
+          ) : null}
         </div>
 
         <Field label="Mobile number" htmlFor="mobileNumber" error={fieldErrors.mobileNumber}>

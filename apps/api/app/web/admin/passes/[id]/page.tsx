@@ -23,7 +23,6 @@ import {
   PAYMENT_STATUS_LABELS,
   SHIFT_TYPES,
   SHIFT_TYPE_LABELS,
-  VEHICLE_TYPES,
   VEHICLE_TYPE_LABELS,
   formatInr,
   formatIstDate,
@@ -39,7 +38,6 @@ import {
   type PassSpecification,
   type PassVehicleCategory,
   type ShiftType,
-  type VehicleType,
 } from '@parking/shared';
 
 import { Banner } from '../../../_components/Banner';
@@ -66,6 +64,7 @@ const FIELD_LABELS: Record<string, string> = {
   vehicleNumber: 'Vehicle number',
   vehicleType: 'Vehicle type',
   vehicleCategory: 'Vehicle category',
+  vehicleCategoryOther: 'Vehicle category (other)',
   mobileNumber: 'Mobile number',
   address: 'Address',
   occupationCategory: 'Occupation',
@@ -157,6 +156,7 @@ export default function AdminPassDetailPage() {
 
   const [viewerOpen, setViewerOpen] = useState(false);
 
+  const [editMode, setEditMode] = useState(false);
   const [editValues, setEditValues] = useState<Record<string, unknown>>({});
   const [editFieldErrors, setEditFieldErrors] = useState<FieldErrors>({});
   const [editError, setEditError] = useState<string | null>(null);
@@ -165,8 +165,8 @@ export default function AdminPassDetailPage() {
   const resetEditValues = useCallback((row: AdminPass) => {
     setEditValues({
       vehicleNumber: row.vehicleNumber,
-      vehicleType: row.vehicleType,
       vehicleCategory: row.vehicleCategory,
+      vehicleCategoryOther: row.vehicleCategoryOther ?? '',
       mobileNumber: row.mobileNumber,
       address: row.address,
       occupationCategory: row.occupationCategory,
@@ -284,6 +284,7 @@ export default function AdminPassDetailPage() {
       });
       setPassBooking(updated);
       resetEditValues(updated);
+      setEditMode(false);
     } catch (error) {
       setEditError(applyApiError(error, setEditFieldErrors));
     } finally {
@@ -313,7 +314,14 @@ export default function AdminPassDetailPage() {
     { label: 'Email', value: passBooking.customer.email },
     ...(passBooking.customer.phone ? [{ label: 'Phone', value: passBooking.customer.phone }] : []),
     { label: 'Location', value: passBooking.location.name },
-    { label: 'Vehicle', value: `${passBooking.vehicleNumber} (${PASS_VEHICLE_CATEGORY_LABELS[passBooking.vehicleCategory]})` },
+    {
+      label: 'Vehicle',
+      value: `${passBooking.vehicleNumber} (${
+        passBooking.vehicleCategory === 'OTHER' && passBooking.vehicleCategoryOther
+          ? passBooking.vehicleCategoryOther
+          : PASS_VEHICLE_CATEGORY_LABELS[passBooking.vehicleCategory]
+      })`,
+    },
     { label: 'Vehicle type', value: VEHICLE_TYPE_LABELS[passBooking.vehicleType] },
     { label: 'Shift', value: SHIFT_TYPE_LABELS[passBooking.shiftType] },
     { label: 'Plan', value: `${passBooking.planLabel} (${formatPassDuration(passBooking.durationUnit, passBooking.durationValue)})` },
@@ -438,6 +446,12 @@ export default function AdminPassDetailPage() {
         ))}
       </div>
 
+      {!editMode ? (
+        <button type="button" className="btn btn-secondary btn-block" onClick={() => setEditMode(true)}>
+          Edit Pass
+        </button>
+      ) : null}
+
       {isActionable(passBooking.status) && !rejectMode && !approveMode ? (
         <div className="btn-row">
           <button type="button" className="btn btn-primary" onClick={() => setApproveMode(true)}>
@@ -545,341 +559,358 @@ export default function AdminPassDetailPage() {
         </div>
       ) : null}
 
-      <h2 className="text-subtitle">Edit pass details</h2>
-      <p className="text-small text-secondary">
-        Every field here — including the ones the customer typed — is edited through this one form. A short note
-        is required so the history below stays readable.
-      </p>
+      {editMode ? (
+        <>
+          <h2 className="text-subtitle">Edit pass details</h2>
+          <p className="text-small text-secondary">
+            Every field here — including the ones the customer typed — is edited through this one form. A short note
+            is required so the history below stays readable.
+          </p>
 
-      {editError ? <Banner kind="danger">{editError}</Banner> : null}
+          {editError ? <Banner kind="danger">{editError}</Banner> : null}
 
-      <form className="stack" onSubmit={onSaveEdit}>
-        <Field label="Vehicle number" htmlFor="vehicleNumber" error={editFieldErrors.vehicleNumber}>
-          <input
-            id="vehicleNumber"
-            className={`input${editFieldErrors.vehicleNumber ? ' has-error' : ''}`}
-            value={editValues.vehicleNumber as string}
-            onChange={(event) => setEditValues((c) => ({ ...c, vehicleNumber: event.target.value }))}
-          />
-        </Field>
-
-        <div className="field">
-          <span className="field-label">Vehicle type</span>
-          <div className="chip-row">
-            {VEHICLE_TYPES.map((type: VehicleType) => (
-              <button
-                key={type}
-                type="button"
-                className={`chip${editValues.vehicleType === type ? ' selected' : ''}`}
-                onClick={() => setEditValues((c) => ({ ...c, vehicleType: type }))}
-              >
-                {VEHICLE_TYPE_LABELS[type]}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="field">
-          <span className="field-label">Vehicle category</span>
-          <div className="chip-row">
-            {PASS_VEHICLE_CATEGORIES.map((category: PassVehicleCategory) => (
-              <button
-                key={category}
-                type="button"
-                className={`chip${editValues.vehicleCategory === category ? ' selected' : ''}`}
-                onClick={() => setEditValues((c) => ({ ...c, vehicleCategory: category }))}
-              >
-                {PASS_VEHICLE_CATEGORY_LABELS[category]}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <Field label="Mobile number" htmlFor="mobileNumber" error={editFieldErrors.mobileNumber}>
-          <input
-            id="mobileNumber"
-            className={`input${editFieldErrors.mobileNumber ? ' has-error' : ''}`}
-            value={editValues.mobileNumber as string}
-            onChange={(event) => setEditValues((c) => ({ ...c, mobileNumber: event.target.value }))}
-          />
-        </Field>
-
-        <Field label="Address" htmlFor="address" error={editFieldErrors.address}>
-          <textarea
-            id="address"
-            className={`textarea${editFieldErrors.address ? ' has-error' : ''}`}
-            value={editValues.address as string}
-            onChange={(event) => setEditValues((c) => ({ ...c, address: event.target.value }))}
-          />
-        </Field>
-
-        <div className="field">
-          <span className="field-label">Occupation</span>
-          <div className="chip-row">
-            {PASS_OCCUPATION_CATEGORIES.map((category) => (
-              <button
-                key={category}
-                type="button"
-                className={`chip${editValues.occupationCategory === category ? ' selected' : ''}`}
-                onClick={() =>
-                  setEditValues((c) => ({
-                    ...c,
-                    occupationCategory: c.occupationCategory === category ? null : category,
-                  }))
-                }
-              >
-                {PASS_OCCUPATION_CATEGORY_LABELS[category]}
-              </button>
-            ))}
-          </div>
-          {editValues.occupationCategory === 'OTHER' ? (
-            <Field label="Specify occupation" htmlFor="occupationOther" error={editFieldErrors.occupationOther}>
+          <form className="stack" onSubmit={onSaveEdit}>
+            <Field label="Vehicle number" htmlFor="vehicleNumber" error={editFieldErrors.vehicleNumber}>
               <input
-                id="occupationOther"
-                className="input"
-                value={editValues.occupationOther as string}
-                onChange={(event) => setEditValues((c) => ({ ...c, occupationOther: event.target.value }))}
+                id="vehicleNumber"
+                className={`input${editFieldErrors.vehicleNumber ? ' has-error' : ''}`}
+                value={editValues.vehicleNumber as string}
+                onChange={(event) => setEditValues((c) => ({ ...c, vehicleNumber: event.target.value }))}
               />
             </Field>
-          ) : null}
-        </div>
 
-        <div className="field">
-          <span className="field-label">Weekly off day</span>
-          <div className="chip-row">
-            {PASS_HOLIDAY_OFF_DAYS.map((day) => (
-              <button
-                key={day}
-                type="button"
-                className={`chip${editValues.holidayOffDay === day ? ' selected' : ''}`}
-                onClick={() =>
-                  setEditValues((c) => ({ ...c, holidayOffDay: c.holidayOffDay === day ? null : day }))
-                }
-              >
-                {PASS_HOLIDAY_OFF_DAY_LABELS[day]}
-              </button>
-            ))}
-          </div>
-          {editValues.holidayOffDay === 'OTHER' ? (
-            <Field label="Specify day" htmlFor="holidayOffDayOther" error={editFieldErrors.holidayOffDayOther}>
+            <div className="field">
+              <span className="field-label">Vehicle category</span>
+              <div className="chip-row">
+                {PASS_VEHICLE_CATEGORIES.map((category: PassVehicleCategory) => (
+                  <button
+                    key={category}
+                    type="button"
+                    className={`chip${editValues.vehicleCategory === category ? ' selected' : ''}`}
+                    onClick={() => setEditValues((c) => ({ ...c, vehicleCategory: category }))}
+                  >
+                    {PASS_VEHICLE_CATEGORY_LABELS[category]}
+                  </button>
+                ))}
+              </div>
+              {editValues.vehicleCategory === 'OTHER' ? (
+                <Field
+                  label="Specify vehicle"
+                  htmlFor="vehicleCategoryOther"
+                  error={editFieldErrors.vehicleCategoryOther}
+                >
+                  <input
+                    id="vehicleCategoryOther"
+                    className={`input${editFieldErrors.vehicleCategoryOther ? ' has-error' : ''}`}
+                    value={editValues.vehicleCategoryOther as string}
+                    onChange={(event) => setEditValues((c) => ({ ...c, vehicleCategoryOther: event.target.value }))}
+                  />
+                </Field>
+              ) : null}
+            </div>
+
+            <Field label="Mobile number" htmlFor="mobileNumber" error={editFieldErrors.mobileNumber}>
               <input
-                id="holidayOffDayOther"
-                className="input"
-                value={editValues.holidayOffDayOther as string}
-                onChange={(event) => setEditValues((c) => ({ ...c, holidayOffDayOther: event.target.value }))}
+                id="mobileNumber"
+                className={`input${editFieldErrors.mobileNumber ? ' has-error' : ''}`}
+                value={editValues.mobileNumber as string}
+                onChange={(event) => setEditValues((c) => ({ ...c, mobileNumber: event.target.value }))}
               />
             </Field>
-          ) : null}
-        </div>
 
-        <Field label="Expected parking days" htmlFor="expectedParkingDays" error={editFieldErrors.expectedParkingDays}>
-          <input
-            id="expectedParkingDays"
-            type="number"
-            min={1}
-            max={31}
-            className="input"
-            value={editValues.expectedParkingDays as string}
-            onChange={(event) => setEditValues((c) => ({ ...c, expectedParkingDays: event.target.value }))}
-          />
-        </Field>
+            <Field label="Address" htmlFor="address" error={editFieldErrors.address}>
+              <textarea
+                id="address"
+                className={`textarea${editFieldErrors.address ? ' has-error' : ''}`}
+                value={editValues.address as string}
+                onChange={(event) => setEditValues((c) => ({ ...c, address: event.target.value }))}
+              />
+            </Field>
 
-        <Field label="Usual arrival time" htmlFor="entryTime" error={editFieldErrors.entryTime}>
-          <input
-            id="entryTime"
-            type="time"
-            className="input"
-            value={editValues.entryTime as string}
-            onChange={(event) => setEditValues((c) => ({ ...c, entryTime: event.target.value }))}
-          />
-        </Field>
+            <div className="field">
+              <span className="field-label">Occupation</span>
+              <div className="chip-row">
+                {PASS_OCCUPATION_CATEGORIES.map((category) => (
+                  <button
+                    key={category}
+                    type="button"
+                    className={`chip${editValues.occupationCategory === category ? ' selected' : ''}`}
+                    onClick={() =>
+                      setEditValues((c) => ({
+                        ...c,
+                        occupationCategory: c.occupationCategory === category ? null : category,
+                      }))
+                    }
+                  >
+                    {PASS_OCCUPATION_CATEGORY_LABELS[category]}
+                  </button>
+                ))}
+              </div>
+              {editValues.occupationCategory === 'OTHER' ? (
+                <Field label="Specify occupation" htmlFor="occupationOther" error={editFieldErrors.occupationOther}>
+                  <input
+                    id="occupationOther"
+                    className="input"
+                    value={editValues.occupationOther as string}
+                    onChange={(event) => setEditValues((c) => ({ ...c, occupationOther: event.target.value }))}
+                  />
+                </Field>
+              ) : null}
+            </div>
 
-        <Field label="Usual leaving time" htmlFor="exitTime" error={editFieldErrors.exitTime}>
-          <input
-            id="exitTime"
-            type="time"
-            className="input"
-            value={editValues.exitTime as string}
-            onChange={(event) => setEditValues((c) => ({ ...c, exitTime: event.target.value }))}
-          />
-        </Field>
+            <div className="field">
+              <span className="field-label">Weekly off day</span>
+              <div className="chip-row">
+                {PASS_HOLIDAY_OFF_DAYS.map((day) => (
+                  <button
+                    key={day}
+                    type="button"
+                    className={`chip${editValues.holidayOffDay === day ? ' selected' : ''}`}
+                    onClick={() =>
+                      setEditValues((c) => ({ ...c, holidayOffDay: c.holidayOffDay === day ? null : day }))
+                    }
+                  >
+                    {PASS_HOLIDAY_OFF_DAY_LABELS[day]}
+                  </button>
+                ))}
+              </div>
+              {editValues.holidayOffDay === 'OTHER' ? (
+                <Field label="Specify day" htmlFor="holidayOffDayOther" error={editFieldErrors.holidayOffDayOther}>
+                  <input
+                    id="holidayOffDayOther"
+                    className="input"
+                    value={editValues.holidayOffDayOther as string}
+                    onChange={(event) => setEditValues((c) => ({ ...c, holidayOffDayOther: event.target.value }))}
+                  />
+                </Field>
+              ) : null}
+            </div>
 
-        <div className="field">
-          <span className="field-label">Facilities</span>
-          <div className="chip-row">
-            {(
-              [
-                ['helmet', 'Helmet'],
-                ['locker', 'Locker'],
-                ['airCheck', 'Air Check'],
-                ['rickshawParking', 'Rickshaw Parking'],
-              ] as const
-            ).map(([key, label]) => (
-              <button
-                key={key}
-                type="button"
-                className={`chip${editValues[key] ? ' selected' : ''}`}
-                onClick={() => setEditValues((c) => ({ ...c, [key]: !c[key] }))}
-              >
-                {label}
+            <Field label="Expected parking days" htmlFor="expectedParkingDays" error={editFieldErrors.expectedParkingDays}>
+              <input
+                id="expectedParkingDays"
+                type="number"
+                min={1}
+                max={31}
+                className="input"
+                value={editValues.expectedParkingDays as string}
+                onChange={(event) => setEditValues((c) => ({ ...c, expectedParkingDays: event.target.value }))}
+              />
+            </Field>
+
+            <Field label="Usual arrival time" htmlFor="entryTime" error={editFieldErrors.entryTime}>
+              <input
+                id="entryTime"
+                type="time"
+                className="input"
+                value={editValues.entryTime as string}
+                onChange={(event) => setEditValues((c) => ({ ...c, entryTime: event.target.value }))}
+              />
+            </Field>
+
+            <Field label="Usual leaving time" htmlFor="exitTime" error={editFieldErrors.exitTime}>
+              <input
+                id="exitTime"
+                type="time"
+                className="input"
+                value={editValues.exitTime as string}
+                onChange={(event) => setEditValues((c) => ({ ...c, exitTime: event.target.value }))}
+              />
+            </Field>
+
+            <div className="field">
+              <span className="field-label">Facilities</span>
+              <div className="chip-row">
+                {(
+                  [
+                    ['helmet', 'Helmet'],
+                    ['locker', 'Locker'],
+                    ['airCheck', 'Air Check'],
+                    ['rickshawParking', 'Rickshaw Parking'],
+                  ] as const
+                ).map(([key, label]) => (
+                  <button
+                    key={key}
+                    type="button"
+                    className={`chip${editValues[key] ? ' selected' : ''}`}
+                    onClick={() => setEditValues((c) => ({ ...c, [key]: !c[key] }))}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <Field label="Renewal reference" htmlFor="renewalReference" error={editFieldErrors.renewalReference}>
+              <input
+                id="renewalReference"
+                className="input"
+                value={editValues.renewalReference as string}
+                onChange={(event) => setEditValues((c) => ({ ...c, renewalReference: event.target.value }))}
+              />
+            </Field>
+
+            <div className="field">
+              <span className="field-label">Specification (admin-only)</span>
+              <div className="chip-row">
+                {PASS_SPECIFICATIONS.map((value) => (
+                  <button
+                    key={value}
+                    type="button"
+                    className={`chip${editValues.specification === value ? ' selected' : ''}`}
+                    onClick={() =>
+                      setEditValues((c) => ({ ...c, specification: c.specification === value ? null : value }))
+                    }
+                  >
+                    {PASS_SPECIFICATION_LABELS[value]}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="field">
+              <span className="field-label">Entry side (admin-only)</span>
+              <div className="chip-row">
+                {PASS_ENTRY_SIDES.map((value) => (
+                  <button
+                    key={value}
+                    type="button"
+                    className={`chip${editValues.entrySide === value ? ' selected' : ''}`}
+                    onClick={() => setEditValues((c) => ({ ...c, entrySide: c.entrySide === value ? null : value }))}
+                  >
+                    {PASS_ENTRY_SIDE_LABELS[value]}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <Field label="Plan label" htmlFor="planLabel" error={editFieldErrors.planLabel}>
+              <input
+                id="planLabel"
+                className="input"
+                value={editValues.planLabel as string}
+                onChange={(event) => setEditValues((c) => ({ ...c, planLabel: event.target.value }))}
+              />
+            </Field>
+
+            <div className="field">
+              <span className="field-label">Shift</span>
+              <div className="chip-row">
+                {SHIFT_TYPES.map((shift: ShiftType) => (
+                  <button
+                    key={shift}
+                    type="button"
+                    className={`chip${editValues.shiftType === shift ? ' selected' : ''}`}
+                    onClick={() => setEditValues((c) => ({ ...c, shiftType: shift }))}
+                  >
+                    {SHIFT_TYPE_LABELS[shift]}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="field">
+              <span className="field-label">Duration unit</span>
+              <div className="chip-row">
+                {PASS_DURATION_UNITS.map((unit) => (
+                  <button
+                    key={unit}
+                    type="button"
+                    className={`chip${editValues.durationUnit === unit ? ' selected' : ''}`}
+                    onClick={() => setEditValues((c) => ({ ...c, durationUnit: unit }))}
+                  >
+                    {PASS_DURATION_UNIT_LABELS[unit]}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <Field
+              label={editValues.durationUnit === 'DAYS' ? 'Duration (days)' : 'Duration (months)'}
+              htmlFor="durationValue"
+              error={editFieldErrors.durationValue}
+              hint="A snapshot of the plan at the time this pass was bought — editing it does not recompute Valid from/until below."
+            >
+              <input
+                id="durationValue"
+                type="number"
+                className="input"
+                value={editValues.durationValue as string}
+                onChange={(event) => setEditValues((c) => ({ ...c, durationValue: event.target.value }))}
+              />
+            </Field>
+
+            <Field label="Amount (₹)" htmlFor="amountInRupees" error={editFieldErrors.amountInPaise}>
+              <input
+                id="amountInRupees"
+                type="number"
+                step="0.01"
+                className="input"
+                value={editValues.amountInRupees as string}
+                onChange={(event) => setEditValues((c) => ({ ...c, amountInRupees: event.target.value }))}
+              />
+            </Field>
+
+            <Field
+              label="Valid from"
+              htmlFor="startDate"
+              error={editFieldErrors.startDate}
+              hint="A manual override — nothing else recomputes when this changes."
+            >
+              <input
+                id="startDate"
+                type="date"
+                className="input"
+                value={editValues.startDate as string}
+                onChange={(event) => setEditValues((c) => ({ ...c, startDate: event.target.value }))}
+              />
+            </Field>
+
+            <Field label="Valid until" htmlFor="endDate" error={editFieldErrors.endDate}>
+              <input
+                id="endDate"
+                type="date"
+                className="input"
+                value={editValues.endDate as string}
+                onChange={(event) => setEditValues((c) => ({ ...c, endDate: event.target.value }))}
+              />
+            </Field>
+
+            <Field
+              label="Note (required)"
+              htmlFor="note"
+              error={editFieldErrors.note}
+              hint="Why this edit was made — shown on the history below."
+            >
+              <textarea
+                id="note"
+                className={`textarea${editFieldErrors.note ? ' has-error' : ''}`}
+                value={editValues.note as string}
+                onChange={(event) => setEditValues((c) => ({ ...c, note: event.target.value }))}
+              />
+            </Field>
+
+            <div className="btn-row">
+              <button type="submit" className="btn btn-primary" disabled={saving}>
+                {saving ? 'Saving…' : 'Save changes'}
               </button>
-            ))}
-          </div>
-        </div>
-
-        <Field label="Renewal reference" htmlFor="renewalReference" error={editFieldErrors.renewalReference}>
-          <input
-            id="renewalReference"
-            className="input"
-            value={editValues.renewalReference as string}
-            onChange={(event) => setEditValues((c) => ({ ...c, renewalReference: event.target.value }))}
-          />
-        </Field>
-
-        <div className="field">
-          <span className="field-label">Specification (admin-only)</span>
-          <div className="chip-row">
-            {PASS_SPECIFICATIONS.map((value) => (
               <button
-                key={value}
                 type="button"
-                className={`chip${editValues.specification === value ? ' selected' : ''}`}
-                onClick={() =>
-                  setEditValues((c) => ({ ...c, specification: c.specification === value ? null : value }))
-                }
+                className="btn btn-ghost"
+                disabled={saving}
+                onClick={() => {
+                  resetEditValues(passBooking);
+                  setEditFieldErrors({});
+                  setEditError(null);
+                  setEditMode(false);
+                }}
               >
-                {PASS_SPECIFICATION_LABELS[value]}
+                Cancel
               </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="field">
-          <span className="field-label">Entry side (admin-only)</span>
-          <div className="chip-row">
-            {PASS_ENTRY_SIDES.map((value) => (
-              <button
-                key={value}
-                type="button"
-                className={`chip${editValues.entrySide === value ? ' selected' : ''}`}
-                onClick={() => setEditValues((c) => ({ ...c, entrySide: c.entrySide === value ? null : value }))}
-              >
-                {PASS_ENTRY_SIDE_LABELS[value]}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <Field label="Plan label" htmlFor="planLabel" error={editFieldErrors.planLabel}>
-          <input
-            id="planLabel"
-            className="input"
-            value={editValues.planLabel as string}
-            onChange={(event) => setEditValues((c) => ({ ...c, planLabel: event.target.value }))}
-          />
-        </Field>
-
-        <div className="field">
-          <span className="field-label">Shift</span>
-          <div className="chip-row">
-            {SHIFT_TYPES.map((shift: ShiftType) => (
-              <button
-                key={shift}
-                type="button"
-                className={`chip${editValues.shiftType === shift ? ' selected' : ''}`}
-                onClick={() => setEditValues((c) => ({ ...c, shiftType: shift }))}
-              >
-                {SHIFT_TYPE_LABELS[shift]}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="field">
-          <span className="field-label">Duration unit</span>
-          <div className="chip-row">
-            {PASS_DURATION_UNITS.map((unit) => (
-              <button
-                key={unit}
-                type="button"
-                className={`chip${editValues.durationUnit === unit ? ' selected' : ''}`}
-                onClick={() => setEditValues((c) => ({ ...c, durationUnit: unit }))}
-              >
-                {PASS_DURATION_UNIT_LABELS[unit]}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <Field
-          label={editValues.durationUnit === 'DAYS' ? 'Duration (days)' : 'Duration (months)'}
-          htmlFor="durationValue"
-          error={editFieldErrors.durationValue}
-          hint="A snapshot of the plan at the time this pass was bought — editing it does not recompute Valid from/until below."
-        >
-          <input
-            id="durationValue"
-            type="number"
-            className="input"
-            value={editValues.durationValue as string}
-            onChange={(event) => setEditValues((c) => ({ ...c, durationValue: event.target.value }))}
-          />
-        </Field>
-
-        <Field label="Amount (₹)" htmlFor="amountInRupees" error={editFieldErrors.amountInPaise}>
-          <input
-            id="amountInRupees"
-            type="number"
-            step="0.01"
-            className="input"
-            value={editValues.amountInRupees as string}
-            onChange={(event) => setEditValues((c) => ({ ...c, amountInRupees: event.target.value }))}
-          />
-        </Field>
-
-        <Field
-          label="Valid from"
-          htmlFor="startDate"
-          error={editFieldErrors.startDate}
-          hint="A manual override — nothing else recomputes when this changes."
-        >
-          <input
-            id="startDate"
-            type="date"
-            className="input"
-            value={editValues.startDate as string}
-            onChange={(event) => setEditValues((c) => ({ ...c, startDate: event.target.value }))}
-          />
-        </Field>
-
-        <Field label="Valid until" htmlFor="endDate" error={editFieldErrors.endDate}>
-          <input
-            id="endDate"
-            type="date"
-            className="input"
-            value={editValues.endDate as string}
-            onChange={(event) => setEditValues((c) => ({ ...c, endDate: event.target.value }))}
-          />
-        </Field>
-
-        <Field
-          label="Note (required)"
-          htmlFor="note"
-          error={editFieldErrors.note}
-          hint="Why this edit was made — shown on the history below."
-        >
-          <textarea
-            id="note"
-            className={`textarea${editFieldErrors.note ? ' has-error' : ''}`}
-            value={editValues.note as string}
-            onChange={(event) => setEditValues((c) => ({ ...c, note: event.target.value }))}
-          />
-        </Field>
-
-        <button type="submit" className="btn btn-primary btn-block" disabled={saving}>
-          {saving ? 'Saving…' : 'Save changes'}
-        </button>
-      </form>
+            </div>
+          </form>
+        </>
+      ) : null}
 
       <h2 className="text-subtitle">History</h2>
       <EventTimeline events={passBooking.statusEvents} />

@@ -38,6 +38,7 @@ export type PassFieldEdit = {
   vehicleNumber?: string;
   vehicleType?: VehicleType;
   vehicleCategory?: PassVehicleCategory;
+  vehicleCategoryOther?: string | null;
   mobileNumber?: string;
   address?: string;
   occupationCategory?: PassOccupationCategory | null;
@@ -69,6 +70,7 @@ const EDITABLE_FIELDS = [
   'vehicleNumber',
   'vehicleType',
   'vehicleCategory',
+  'vehicleCategoryOther',
   'mobileNumber',
   'address',
   'occupationCategory',
