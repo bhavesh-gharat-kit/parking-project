@@ -67,14 +67,14 @@ export default function AdminDashboardPage() {
       {loadError ? <Banner kind="danger">{loadError}</Banner> : null}
 
       <div className="stack">
+        <Link href="/web/admin/passes" className="btn btn-primary btn-block">
+          Pass Approvals
+        </Link>
         <Link href="/web/admin/bookings" className="btn btn-primary btn-block">
           Booking approvals
         </Link>
         <Link href="/web/admin/reports" className="btn btn-primary btn-block">
           Reports
-        </Link>
-        <Link href="/web/admin/users" className="btn btn-primary btn-block">
-          Users
         </Link>
         <Link href="/web/admin/locations" className="btn btn-secondary btn-block">
           Locations &amp; rates

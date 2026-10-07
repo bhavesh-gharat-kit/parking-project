@@ -24,5 +24,11 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
+  // Only intercept GET — iOS Safari corrupts a multipart/form-data POST body
+  // (e.g. the UTR screenshot upload) when a service worker re-dispatches
+  // `event.request` via `respondWith(fetch(...))`. Letting non-GET requests
+  // fall through to the network untouched avoids that WebKit bug; a
+  // registered `fetch` handler is all Chrome's installability check needs.
+  if (event.request.method !== 'GET') return;
   event.respondWith(fetch(event.request));
 });

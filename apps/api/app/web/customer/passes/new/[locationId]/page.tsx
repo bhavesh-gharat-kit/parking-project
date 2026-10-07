@@ -100,7 +100,7 @@ export default function NewPassPlanPage() {
             >
               <div className={`card plan-card${planId === plan.id ? ' card-selected' : ''}`}>
                 <div className="plan-card-top">
-                  <p className="text-small-bold">{plan.label}</p>
+                  <p className="text-small-bold">{plan.label} - {plan.shiftType=="BOTH"?"Day & Night":plan.shiftType}</p>
                   <p className="plan-card-price">{formatInr(plan.priceInPaise)}</p>
                 </div>
                 <p className="text-small text-secondary">

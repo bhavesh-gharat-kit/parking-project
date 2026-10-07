@@ -135,7 +135,7 @@ export default function PassDocumentPage() {
         <button type="button" className="btn btn-primary" onClick={() => window.print()}>
           Download / print pass
         </button>
-        <Link href={`/web/customer/passes/${id}`} className="btn btn-ghost">
+        <Link href={`/web/admin/passes/${id}`} className="btn btn-ghost">
           ← Back to pass
         </Link>
       </div>
