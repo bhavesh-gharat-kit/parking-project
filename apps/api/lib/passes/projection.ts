@@ -67,6 +67,7 @@ export function toPassBooking(row: PassBookingWithRelations): PassBooking {
       upiQrImageUrl: row.location.upiQrImageUrl,
     },
 
+    passPlanId: row.passPlanId,
     planLabel: row.planLabel,
     vehicleType: row.vehicleType,
     shiftType: row.shiftType,

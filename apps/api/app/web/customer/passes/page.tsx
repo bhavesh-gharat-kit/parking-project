@@ -119,6 +119,14 @@ function PassCard({ pass }: { pass: PassBooking }) {
           View pass / Download
         </Link>
       ) : null}
+      {confirmed && expired ? (
+        <Link
+          href={`/web/customer/passes/new/${pass.location.id}?renewFrom=${pass.id}`}
+          className="text-small text-primary"
+        >
+          Renew
+        </Link>
+      ) : null}
     </div>
   );
 }

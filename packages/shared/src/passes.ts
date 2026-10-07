@@ -427,6 +427,10 @@ export const PassBookingSchema = z.object({
 
   location: PassBookingLocationSchema,
 
+  /** The plan tier this was bought under — may since have been edited or
+   *  retired (D5 point 2); a renewal flow uses this only to try to
+   *  re-select the same tier, never to re-trust its current price/duration. */
+  passPlanId: z.string(),
   planLabel: z.string(),
   vehicleType: VehicleTypeSchema,
   shiftType: ShiftTypeSchema,

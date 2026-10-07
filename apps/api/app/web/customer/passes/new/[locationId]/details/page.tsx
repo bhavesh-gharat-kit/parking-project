@@ -59,6 +59,7 @@ export default function NewPassDetailsPage() {
 
   const passPlanId = searchParams.get('passPlanId');
   const vehicleType = searchParams.get('vehicleType') as VehicleType | null;
+  const renewFrom = searchParams.get('renewFrom');
 
   const [values, setValues] = useState(EMPTY);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
@@ -87,8 +88,10 @@ export default function NewPassDetailsPage() {
   }, [locationId, vehicleType, passPlanId]);
 
   // Convenience pre-fill only (D5 point 1) — the field stays freely editable
-  // and is never validated against the profile value.
+  // and is never validated against the profile value. Skipped on a renewal:
+  // the old pass's own mobile number (below) takes precedence.
   useEffect(() => {
+    if (renewFrom) return;
     let cancelled = false;
     (async () => {
       try {
@@ -103,7 +106,51 @@ export default function NewPassDetailsPage() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [renewFrom]);
+
+  // Renewal convenience pre-fill — copies the expired pass's application
+  // fields in verbatim so the customer isn't retyping the paper form from
+  // scratch. Purely a starting point: every field stays freely editable and
+  // none of this is re-validated against the old pass (same D5 point 1
+  // reasoning as the profile-phone pre-fill above). `renewalReference`
+  // defaults to the old pass's own number — exactly what the field's hint
+  // already asks customers to type in by hand.
+  useEffect(() => {
+    if (!renewFrom) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const oldPass = await apiRequest<PassBooking>(`/api/passes/${renewFrom}`);
+        if (cancelled) return;
+        setValues((current) => ({
+          ...current,
+          vehicleNumber: oldPass.vehicleNumber,
+          vehicleCategory: oldPass.vehicleCategory,
+          vehicleCategoryOther: oldPass.vehicleCategoryOther ?? '',
+          mobileNumber: oldPass.mobileNumber,
+          address: oldPass.address,
+          occupationCategory: oldPass.occupationCategory,
+          occupationOther: oldPass.occupationOther ?? '',
+          holidayOffDay: oldPass.holidayOffDay,
+          holidayOffDayOther: oldPass.holidayOffDayOther ?? '',
+          helmet: oldPass.helmet,
+          locker: oldPass.locker,
+          airCheck: oldPass.airCheck,
+          rickshawParking: oldPass.rickshawParking,
+          renewalReference: oldPass.passNumber,
+          expectedParkingDays:
+            oldPass.expectedParkingDays !== null ? String(oldPass.expectedParkingDays) : '',
+          entryTime: oldPass.entryTime ?? '',
+          exitTime: oldPass.exitTime ?? '',
+        }));
+      } catch {
+        // No old pass to pre-fill from — the form just starts blank.
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [renewFrom]);
 
   if (!passPlanId || !vehicleType) {
     return (

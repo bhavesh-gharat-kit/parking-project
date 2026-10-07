@@ -183,6 +183,15 @@ export default function PassSummaryPage() {
         </>
       ) : null}
 
+      {passBooking.status === 'CONFIRMED' && expired ? (
+        <Link
+          href={`/web/customer/passes/new/${passBooking.location.id}?renewFrom=${passBooking.id}`}
+          className="btn btn-primary btn-block"
+        >
+          Renew this pass
+        </Link>
+      ) : null}
+
       <button type="button" className="btn btn-ghost" onClick={() => router.replace('/web/customer/passes')}>
         ← My passes
       </button>

@@ -14,6 +14,7 @@
   "scripts": {
     "dev:api": "npm run dev -w api",
     "dev:mobile": "npm run start -w mobile",
+    "dev:mobile-lite": "npm run start -w mobile-lite",
     "build:api": "npm run build -w api",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "lint": "npm run lint --workspaces --if-present",

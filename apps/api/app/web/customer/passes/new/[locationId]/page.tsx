@@ -1,6 +1,6 @@
 'use client';
 
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
 import {
@@ -8,6 +8,7 @@ import {
   SHIFT_TYPE_LABELS,
   formatInr,
   formatPassDuration,
+  type PassBooking,
   type PassPlan,
 } from '@parking/shared';
 
@@ -28,7 +29,10 @@ const SHIFT_FILTER_LABELS: Record<ShiftFilter, string> = {
 
 export default function NewPassPlanPage() {
   const { locationId } = useParams<{ locationId: string }>();
+  const searchParams = useSearchParams();
   const router = useRouter();
+
+  const renewFrom = searchParams.get('renewFrom');
 
   const [plans, setPlans] = useState<PassPlan[] | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -52,6 +56,30 @@ export default function NewPassPlanPage() {
     };
   }, [locationId]);
 
+  // Renewal convenience pre-fill only — mirrors the details page's "never
+  // trusted, just a starting point" pattern. If the old pass's plan tier was
+  // since edited or retired, this just leaves the filter/selection at their
+  // defaults and the customer picks manually.
+  useEffect(() => {
+    if (!renewFrom || plans === null) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const oldPass = await apiRequest<PassBooking>(`/api/passes/${renewFrom}`);
+        if (cancelled) return;
+        setShiftFilter(oldPass.shiftType);
+        if (plans.some((plan) => plan.id === oldPass.passPlanId)) {
+          setPlanId(oldPass.passPlanId);
+        }
+      } catch {
+        // No old pass to pre-fill from — filters just stay at their defaults.
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [renewFrom, plans]);
+
   const visiblePlans = (plans ?? []).filter(
     (plan) => shiftFilter === 'ALL' || plan.shiftType === shiftFilter,
   );
@@ -61,7 +89,8 @@ export default function NewPassPlanPage() {
     if (!selectedPlan) return;
     router.push(
       `/web/customer/passes/new/${locationId}/details?passPlanId=${selectedPlan.id}` +
-        `&vehicleType=${VEHICLE_TYPE}`,
+        `&vehicleType=${VEHICLE_TYPE}` +
+        (renewFrom ? `&renewFrom=${renewFrom}` : ''),
     );
   };
 
