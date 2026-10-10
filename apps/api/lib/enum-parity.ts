@@ -12,6 +12,7 @@
  */
 import type {
   BookingStatus as SharedBookingStatus,
+  ComplaintStatus as SharedComplaintStatus,
   DevicePlatform as SharedDevicePlatform,
   PassBookingStatus as SharedPassBookingStatus,
   PassEntrySide as SharedPassEntrySide,
@@ -26,6 +27,7 @@ import type {
 
 import type {
   BookingStatus as DbBookingStatus,
+  ComplaintStatus as DbComplaintStatus,
   DevicePlatform as DbDevicePlatform,
   PassBookingStatus as DbPassBookingStatus,
   PassEntrySide as DbPassEntrySide,
@@ -63,6 +65,7 @@ type _PassVehicleCategoryParity = AssertSame<Equals<SharedPassVehicleCategory, D
 type _PassSpecificationParity = AssertSame<Equals<SharedPassSpecification, DbPassSpecification>>;
 type _PassEntrySideParity = AssertSame<Equals<SharedPassEntrySide, DbPassEntrySide>>;
 type _PassBookingStatusParity = AssertSame<Equals<SharedPassBookingStatus, DbPassBookingStatus>>;
+type _ComplaintStatusParity = AssertSame<Equals<SharedComplaintStatus, DbComplaintStatus>>;
 
 /** Keeps the aliases above referenced so nothing prunes them as unused. */
 export type EnumParityReport = {
@@ -77,4 +80,5 @@ export type EnumParityReport = {
   passSpecification: _PassSpecificationParity;
   passEntrySide: _PassEntrySideParity;
   passBookingStatus: _PassBookingStatusParity;
+  complaintStatus: _ComplaintStatusParity;
 };

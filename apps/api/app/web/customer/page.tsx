@@ -23,6 +23,9 @@ export default async function CustomerHomePage() {
         <Link href="/web/customer/vehicles" className="btn btn-secondary btn-block">
           My vehicles
         </Link>
+        <Link href="/web/customer/complaints" className="btn btn-secondary btn-block">
+          Help &amp; complaints
+        </Link>
       </div>
 
       <p className="text-small text-secondary">

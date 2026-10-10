@@ -33,9 +33,38 @@ export type BookingPushPayload = {
  * worth surfacing to the admin action or the cron sweep that triggered this.
  */
 export async function sendBookingPush(userId: string, payload: BookingPushPayload): Promise<void> {
+  await sendPush({ userId }, payload.title, payload.body, { bookingId: payload.bookingId });
+}
+
+/** Tells a user their complaint's status changed. Never throws. */
+export async function sendComplaintPush(
+  userId: string,
+  payload: { title: string; body: string; complaintId: string },
+): Promise<void> {
+  await sendPush({ userId }, payload.title, payload.body, { complaintId: payload.complaintId });
+}
+
+/** Tells every admin a new complaint came in. Never throws. */
+export async function sendComplaintPushToAdmins(payload: {
+  title: string;
+  body: string;
+  complaintId: string;
+}): Promise<void> {
+  await sendPush({ admins: true }, payload.title, payload.body, { complaintId: payload.complaintId });
+}
+
+async function sendPush(
+  target: { userId: string } | { admins: true },
+  title: string,
+  body: string,
+  data: Record<string, string>,
+): Promise<void> {
   try {
     const tokens = await prisma.pushToken.findMany({
-      where: { userId, isActive: true },
+      where:
+        'userId' in target
+          ? { userId: target.userId, isActive: true }
+          : { isActive: true, user: { role: 'ADMIN', isActive: true } },
       select: { token: true },
     });
 
@@ -47,9 +76,9 @@ export async function sendBookingPush(userId: string, payload: BookingPushPayloa
 
     const messages: ExpoPushMessage[] = validTokens.map((to) => ({
       to,
-      title: payload.title,
-      body: payload.body,
-      data: { bookingId: payload.bookingId },
+      title,
+      body,
+      data,
     }));
 
     const staleTokens: string[] = [];
@@ -79,6 +108,6 @@ export async function sendBookingPush(userId: string, payload: BookingPushPayloa
       });
     }
   } catch (error) {
-    console.warn(`[push] could not notify user ${userId}:`, error);
+    console.warn('[push] could not send notification:', error);
   }
 }

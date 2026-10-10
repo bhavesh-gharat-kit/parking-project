@@ -146,3 +146,16 @@ export const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
 export const DEVICE_PLATFORMS = ['ANDROID', 'IOS', 'WEB'] as const;
 export type DevicePlatform = (typeof DEVICE_PLATFORMS)[number];
 export const DevicePlatformSchema = z.enum(DEVICE_PLATFORMS);
+
+/* ─────────────────────────── Complaints ─────────────────────────── */
+
+export const COMPLAINT_STATUSES = ['OPEN', 'IN_PROGRESS', 'RESOLVED', 'REJECTED'] as const;
+export type ComplaintStatus = (typeof COMPLAINT_STATUSES)[number];
+export const ComplaintStatusSchema = z.enum(COMPLAINT_STATUSES);
+
+export const COMPLAINT_STATUS_LABELS: Record<ComplaintStatus, string> = {
+  OPEN: 'Open',
+  IN_PROGRESS: 'In progress',
+  RESOLVED: 'Resolved',
+  REJECTED: 'Rejected',
+};

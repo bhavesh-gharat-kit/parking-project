@@ -1,5 +1,7 @@
 import {
   BOOKING_STATUS_LABELS,
+  COMPLAINT_STATUS_LABELS,
+  type ComplaintStatus,
   PASS_BOOKING_STATUS_LABELS,
   type BookingStatus,
   type PassBookingStatus,
@@ -62,4 +64,15 @@ export function PassStatusPill({ status, large }: { status: PassBookingStatus; l
   return (
     <Pill label={PASS_BOOKING_STATUS_LABELS[status]} tone={PASS_BOOKING_STATUS_TONE[status]} large={large} />
   );
+}
+
+const COMPLAINT_STATUS_TONE: Record<ComplaintStatus, Tone> = {
+  OPEN: 'waiting',
+  IN_PROGRESS: 'waiting',
+  RESOLVED: 'done',
+  REJECTED: 'bad',
+};
+
+export function ComplaintStatusPill({ status, large }: { status: ComplaintStatus; large?: boolean }) {
+  return <Pill label={COMPLAINT_STATUS_LABELS[status]} tone={COMPLAINT_STATUS_TONE[status]} large={large} />;
 }

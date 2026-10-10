@@ -15,3 +15,4 @@ export * from './receipts';
 export * from './push';
 export * from './passes';
 export * from './pass-document';
+export * from './complaints';

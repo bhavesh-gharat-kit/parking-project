@@ -57,3 +57,10 @@ export const UTR_SCREENSHOT_RULES = {
   maxSizeBytes: 5 * 1024 * 1024, // 5 MB
   allowedMimeTypes: ['image/jpeg', 'image/png', 'image/webp'] as string[],
 };
+
+/** Size and type limits for complaint images. */
+export const COMPLAINT_IMAGE_RULES = {
+  maxSizeBytes: 5 * 1024 * 1024, // 5 MB
+  maxCount: 3,
+  allowedMimeTypes: ['image/jpeg', 'image/png', 'image/webp'] as string[],
+};

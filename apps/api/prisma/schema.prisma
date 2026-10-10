@@ -105,6 +105,12 @@ model User {
   verifiedPassPayments PassPayment[]     @relation("PassPaymentVerifiedBy")
   passBookingEvents    PassStatusEvent[] @relation("PassBookingEventActor")
 
+  /// Complaints this user raised, and complaints/status changes they handled as
+  /// an admin.
+  complaints          Complaint[]            @relation("ComplaintRaisedBy")
+  resolvedComplaints  Complaint[]            @relation("ComplaintResolvedBy")
+  complaintEvents     ComplaintStatusEvent[] @relation("ComplaintEventActor")
+
   @@index([role, isActive])
   @@index([createdAt])
 }
@@ -972,6 +978,110 @@ model PassStatusEvent {
 
   @@index([passBookingId, createdAt])
   @@index([createdAt])
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  COMPLAINTS
+//
+//  A signed-in user raises a complaint by picking one of the admin-managed
+//  `ComplaintCategory` titles, or "Other" with a title of their own, plus a
+//  description and up to a few optional images. Deliberately NOT linked to a
+//  booking or pass — the description carries whatever context the user wants
+//  to give.
+// ═══════════════════════════════════════════════════════════════════════════
+
+enum ComplaintStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  REJECTED
+}
+
+/// The "common issue titles" in the complaint form. Never hard-deleted: a
+/// retired title gets `isActive = false` so old complaints still resolve it.
+model ComplaintCategory {
+  id        String  @id @default(cuid())
+  title     String  @unique @db.VarChar(120)
+  sortOrder Int     @default(0)
+  isActive  Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  complaints Complaint[]
+
+  @@index([isActive, sortOrder])
+}
+
+model Complaint {
+  id String @id @default(cuid())
+
+  /// Human-friendly reference, shown as "C-0042".
+  ticketNo Int @unique @default(autoincrement())
+
+  userId String
+
+  /// NULL when the user chose "Other" and typed `customTitle`.
+  categoryId  String?
+  customTitle String? @db.VarChar(120)
+
+  /// Snapshot of the category title / custom title at creation, so renaming a
+  /// category later never rewrites what the user filed.
+  title       String          @db.VarChar(120)
+  description String          @db.Text
+  status      ComplaintStatus @default(OPEN)
+
+  /// Admin's reply, shown to the user.
+  resolutionNote String? @db.Text
+  resolvedAt     DateTime?
+  resolvedById   String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user       User               @relation("ComplaintRaisedBy", fields: [userId], references: [id], onDelete: Restrict)
+  category   ComplaintCategory? @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  resolvedBy User?              @relation("ComplaintResolvedBy", fields: [resolvedById], references: [id], onDelete: SetNull)
+
+  images ComplaintImage[]
+  events ComplaintStatusEvent[]
+
+  @@index([userId, createdAt])
+  @@index([status, createdAt])
+  @@index([categoryId])
+}
+
+model ComplaintImage {
+  id          String @id @default(cuid())
+  complaintId String
+  url         String @db.Text
+  sortOrder   Int    @default(0)
+
+  createdAt DateTime @default(now())
+
+  complaint Complaint @relation(fields: [complaintId], references: [id], onDelete: Cascade)
+
+  @@index([complaintId, sortOrder])
+}
+
+/// Audit trail, same idea as `BookingStatusEvent`.
+model ComplaintStatusEvent {
+  id          String @id @default(cuid())
+  complaintId String
+
+  fromStatus ComplaintStatus?
+  toStatus   ComplaintStatus
+
+  actorId   String?
+  actorRole UserRole?
+  note      String?  @db.Text
+
+  createdAt DateTime @default(now())
+
+  complaint Complaint @relation(fields: [complaintId], references: [id], onDelete: Cascade)
+  actor     User?     @relation("ComplaintEventActor", fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([complaintId, createdAt])
 }
 
 // ═══════════════════════════════════════════════════════════════════════════

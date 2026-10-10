@@ -93,6 +93,15 @@ const KALYAN_PASS_PLANS: {
   { vehicleType: 'CAR', shiftType: 'BOTH', label: 'Monthly', durationUnit: 'MONTHS', durationValue: 1, priceInPaise: 120000, sortOrder: 4 },
 ];
 
+const DEFAULT_COMPLAINT_CATEGORIES = [
+  'Wrong amount charged',
+  'Payment not verified',
+  'Booking or pass not showing',
+  'Parking location issue',
+  'Staff behaviour',
+  'App or website problem',
+];
+
 async function main() {
   const databaseUrl = process.env.DATABASE_URL;
   if (!databaseUrl) throw new Error('DATABASE_URL is not set.');
@@ -170,6 +179,16 @@ async function main() {
       passPlanCount += 1;
     }
     console.log(`Pass plans ready: ${passPlanCount} for ${location.name}.`);
+
+    // `update: {}` — never clobber a title an admin renamed or re-ordered.
+    for (const [index, title] of DEFAULT_COMPLAINT_CATEGORIES.entries()) {
+      await prisma.complaintCategory.upsert({
+        where: { title },
+        update: {},
+        create: { title, sortOrder: index },
+      });
+    }
+    console.log(`Complaint categories ready: ${DEFAULT_COMPLAINT_CATEGORIES.length}.`);
   } finally {
     await prisma.$disconnect();
   }

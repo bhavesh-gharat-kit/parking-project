@@ -15,6 +15,7 @@ const CUSTOMER_LINKS: NavLink[] = [
   { href: '/web/customer/passes', label: 'My passes' },
   { href: '/web/customer/book', label: 'Book parking' },
   { href: '/web/customer/vehicles', label: 'My vehicles' },
+  { href: '/web/customer/complaints', label: 'Complaints' },
   { href: '/web/customer/profile', label: 'Profile' },
 ];
 
@@ -23,6 +24,7 @@ const ADMIN_LINKS: NavLink[] = [
   { href: '/web/admin/bookings', label: 'Bookings' },
   { href: '/web/admin/passes', label: 'Passes' },
   { href: '/web/admin/locations', label: 'Locations' },
+  { href: '/web/admin/complaints', label: 'Complaints' },
   { href: '/web/admin/users', label: 'Users' },
   { href: '/web/admin/reports', label: 'Reports' },
   { href: '/web/admin/profile', label: 'Profile' },
