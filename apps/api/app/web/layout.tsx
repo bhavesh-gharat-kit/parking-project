@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 
 import './_lib/web.css';
 import { InstallBanner } from './_components/InstallBanner';
+import { TawkTo } from './_components/TawkTo';
 
 export const metadata: Metadata = {
   title: 'Pay & Park',
@@ -27,6 +28,7 @@ export default function WebLayout({ children }: { children: ReactNode }) {
     <div className="web-root">
       {children}
       <InstallBanner />
+      <TawkTo />
     </div>
   );
 }
