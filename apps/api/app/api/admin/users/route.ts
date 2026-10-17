@@ -14,7 +14,7 @@ import type { NextRequest } from 'next/server';
 import { AdminUserListQuerySchema, type AdminUser, type Paginated } from '@parking/shared';
 
 import { toAdminUser } from '@/lib/admin/users';
-import { requireRole } from '@/lib/auth/guard';
+import { requireAdmin } from '@/lib/auth/guard';
 import { prisma } from '@/lib/db';
 import { failValidation, ok } from '@/lib/http';
 
@@ -22,7 +22,7 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 export async function GET(req: NextRequest) {
-  const auth = await requireRole(req, 'ADMIN');
+  const auth = await requireAdmin(req);
   if (!auth.ok) return auth.response;
 
   const query = AdminUserListQuerySchema.safeParse(
@@ -32,7 +32,9 @@ export async function GET(req: NextRequest) {
 
   const { page, pageSize, search, isActive } = query.data;
 
+  // Staff accounts live under /api/admin/admins (super admin only).
   const where = {
+    role: 'USER' as const,
     ...(isActive !== undefined ? { isActive } : {}),
     ...(search
       ? {

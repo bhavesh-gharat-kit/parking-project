@@ -25,7 +25,12 @@ import {
   PassVehicleNumberSchema,
   ShiftTypeSchema,
 } from './passes';
-import { CuidSchema } from './schemas';
+import {
+  CuidSchema,
+  EmailSchema,
+  OptionalIndianPhoneSchema,
+  PasswordSchema,
+} from './schemas';
 
 /* ═══════════════════════════ Booking queue (§21) ═══════════════════════════ */
 
@@ -316,3 +321,68 @@ export const AdminPassEditRequestSchema = z
   );
 export type AdminPassEditRequest = z.input<typeof AdminPassEditRequestSchema>;
 export type AdminPassEditRequestParsed = z.output<typeof AdminPassEditRequestSchema>;
+
+/* ═══════════════════════ Admin-account management ═══════════════════════════
+ *
+ * Super-admin only (`/api/admin/admins/**`, `/web/admin/admins`). Not used by the
+ * native app. Staff accounts are kept out of the customer user list above.
+ */
+
+export const ADMIN_STAFF_ROLES = ['ADMIN', 'SUPER_ADMIN'] as const;
+export const AdminStaffRoleSchema = z.enum(ADMIN_STAFF_ROLES);
+
+export const AdminAccountSchema = AdminUserSchema.extend({
+  /** What this account has done, from the existing event/review columns. */
+  activity: z.object({
+    bookingsReviewed: z.number(),
+    passesReviewed: z.number(),
+    complaintsResolved: z.number(),
+  }),
+});
+export type AdminAccount = z.infer<typeof AdminAccountSchema>;
+
+export const AdminAccountListQuerySchema = PaginationQuerySchema.extend({
+  search: z.string().trim().min(1).max(100).optional(),
+});
+
+/** `POST /api/admin/admins`. The super admin sets the first password and hands it over. */
+export const AdminAccountCreateRequestSchema = z.object({
+  email: EmailSchema,
+  name: z.string().trim().min(1, 'Name is required').max(100),
+  phone: OptionalIndianPhoneSchema,
+  password: PasswordSchema,
+  role: AdminStaffRoleSchema.default('ADMIN'),
+});
+export type AdminAccountCreateRequest = z.input<typeof AdminAccountCreateRequestSchema>;
+
+/** `PATCH /api/admin/admins/:id` — block/unblock, rename, change role, reset password. */
+export const AdminAccountUpdateRequestSchema = z
+  .object({
+    isActive: z.boolean(),
+    name: z.string().trim().min(1).max(100),
+    role: AdminStaffRoleSchema,
+    password: PasswordSchema,
+  })
+  .partial()
+  .refine((value) => Object.keys(value).length > 0, 'Nothing to change');
+export type AdminAccountUpdateRequest = z.input<typeof AdminAccountUpdateRequestSchema>;
+
+export const ADMIN_AUDIT_ACTIONS = [
+  'CREATED',
+  'BLOCKED',
+  'UNBLOCKED',
+  'DELETED',
+  'PASSWORD_RESET',
+  'UPDATED',
+] as const;
+export type AdminAuditAction = (typeof ADMIN_AUDIT_ACTIONS)[number];
+
+export const AdminAuditEventSchema = z.object({
+  id: z.string(),
+  actorEmail: z.string(),
+  targetEmail: z.string(),
+  action: z.string(),
+  note: z.string().nullable(),
+  createdAt: z.string(),
+});
+export type AdminAuditEvent = z.infer<typeof AdminAuditEventSchema>;

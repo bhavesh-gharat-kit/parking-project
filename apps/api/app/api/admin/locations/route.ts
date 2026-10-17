@@ -2,7 +2,7 @@
  * GET/POST /api/admin/locations — the admin's full location list, and creating
  * a new branch (context.txt §3, §6, §23; Phase 04).
  *
- * `ADMIN`-only, same `requireRole` gate every admin route starts with. Unlike
+ * `ADMIN`-only, same `requireAdmin` gate every admin route starts with. Unlike
  * the public `GET /api/locations`, this includes inactive locations — an admin
  * re-enabling a closed branch needs to find it first.
  */
@@ -10,7 +10,7 @@ import type { NextRequest } from 'next/server';
 
 import { ParkingLocationRequestSchema, type AdminParkingLocation } from '@parking/shared';
 
-import { requireRole } from '@/lib/auth/guard';
+import { requireAdmin } from '@/lib/auth/guard';
 import { parseJsonBody } from '@/lib/auth/route-helpers';
 import { prisma } from '@/lib/db';
 import { fail, ok } from '@/lib/http';
@@ -31,7 +31,7 @@ function isUniqueViolation(error: unknown): boolean {
 }
 
 export async function GET(req: NextRequest) {
-  const auth = await requireRole(req, 'ADMIN');
+  const auth = await requireAdmin(req);
   if (!auth.ok) return auth.response;
 
   const locations = await prisma.parkingLocation.findMany({
@@ -43,7 +43,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const auth = await requireRole(req, 'ADMIN');
+  const auth = await requireAdmin(req);
   if (!auth.ok) return auth.response;
 
   const body = await parseJsonBody(req, ParkingLocationRequestSchema);

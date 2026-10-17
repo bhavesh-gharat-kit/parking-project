@@ -64,7 +64,7 @@ async function sendPush(
       where:
         'userId' in target
           ? { userId: target.userId, isActive: true }
-          : { isActive: true, user: { role: 'ADMIN', isActive: true } },
+          : { isActive: true, user: { role: { in: ['ADMIN', 'SUPER_ADMIN'] }, isActive: true } },
       select: { token: true },
     });
 

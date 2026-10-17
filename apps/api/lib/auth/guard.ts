@@ -6,7 +6,7 @@
  *
  * ```ts
  * export async function GET(req: NextRequest) {
- *   const auth = await requireRole(req, 'ADMIN');
+ *   const auth = await requireAdmin(req);
  *   if (!auth.ok) return auth.response;
  *   //  auth.actor.userId / auth.actor.role are now trustworthy
  * }
@@ -36,7 +36,7 @@
  */
 import type { NextResponse } from 'next/server';
 
-import type { UserRole } from '@parking/shared';
+import { isAdminRole, isSuperAdminRole, type UserRole } from '@parking/shared';
 
 import { prisma } from '@/lib/db';
 import { fail } from '@/lib/http';
@@ -127,6 +127,39 @@ export async function requireRole(req: GuardRequest, role: UserRole): Promise<Gu
   if (result.actor.role !== role) {
     // No detail about what was required, and the same message whatever the
     // endpoint: a customer poking at admin URLs learns nothing from the answer.
+    return {
+      ok: false,
+      response: fail('FORBIDDEN', 'You do not have permission to perform this action.'),
+    };
+  }
+
+  return result;
+}
+
+/**
+ * Any staff account — `ADMIN` or `SUPER_ADMIN`. Every handler under
+ * `app/api/admin/**` calls this; a super admin can do everything an admin can.
+ */
+export async function requireAdmin(req: GuardRequest): Promise<GuardResult> {
+  const result = await requireUser(req);
+  if (!result.ok) return result;
+
+  if (!isAdminRole(result.actor.role)) {
+    return {
+      ok: false,
+      response: fail('FORBIDDEN', 'You do not have permission to perform this action.'),
+    };
+  }
+
+  return result;
+}
+
+/** Admin-account management only (`/api/admin/admins/**`). */
+export async function requireSuperAdmin(req: GuardRequest): Promise<GuardResult> {
+  const result = await requireUser(req);
+  if (!result.ok) return result;
+
+  if (!isSuperAdminRole(result.actor.role)) {
     return {
       ok: false,
       response: fail('FORBIDDEN', 'You do not have permission to perform this action.'),

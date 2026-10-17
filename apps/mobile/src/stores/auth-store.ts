@@ -34,6 +34,7 @@
 import { create } from 'zustand';
 
 import {
+  isAdminRole,
   type AuthSession,
   type GoogleSignInRequest,
   type LoginRequestParsed,
@@ -178,6 +179,6 @@ async function adopt(
    actually reads changes. */
 
 export const selectIsSignedIn = (state: AuthState) => state.status === 'signedIn';
-export const selectIsAdmin = (state: AuthState) => state.user?.role === 'ADMIN';
+export const selectIsAdmin = (state: AuthState) => isAdminRole(state.user?.role);
 export const selectUser = (state: AuthState) => state.user;
 export const selectStatus = (state: AuthState) => state.status;

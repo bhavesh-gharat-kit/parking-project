@@ -17,7 +17,7 @@ import type { NextRequest } from 'next/server';
 import { AdminUserSetActiveRequestSchema } from '@parking/shared';
 
 import { toAdminUser } from '@/lib/admin/users';
-import { requireRole } from '@/lib/auth/guard';
+import { requireAdmin } from '@/lib/auth/guard';
 import { parseJsonBody } from '@/lib/auth/route-helpers';
 import { prisma } from '@/lib/db';
 import { fail, ok } from '@/lib/http';
@@ -28,18 +28,18 @@ export const dynamic = 'force-dynamic';
 type RouteContext = { params: Promise<{ id: string }> };
 
 export async function GET(req: NextRequest, { params }: RouteContext) {
-  const auth = await requireRole(req, 'ADMIN');
+  const auth = await requireAdmin(req);
   if (!auth.ok) return auth.response;
 
   const { id } = await params;
   const user = await prisma.user.findUnique({ where: { id } });
-  if (!user) return fail('NOT_FOUND', 'That user could not be found.');
+  if (!user || user.role !== 'USER') return fail('NOT_FOUND', 'That user could not be found.');
 
   return ok(toAdminUser(user), { headers: { 'Cache-Control': 'no-store' } });
 }
 
 export async function PATCH(req: NextRequest, { params }: RouteContext) {
-  const auth = await requireRole(req, 'ADMIN');
+  const auth = await requireAdmin(req);
   if (!auth.ok) return auth.response;
 
   const { id } = await params;
@@ -53,7 +53,8 @@ export async function PATCH(req: NextRequest, { params }: RouteContext) {
   }
 
   const existing = await prisma.user.findUnique({ where: { id } });
-  if (!existing) return fail('NOT_FOUND', 'That user could not be found.');
+  // Blocking a staff account is the super admin's job, via /api/admin/admins.
+  if (!existing || existing.role !== 'USER') return fail('NOT_FOUND', 'That user could not be found.');
 
   const body = await parseJsonBody(req, AdminUserSetActiveRequestSchema);
   if (!body.ok) return body.response;

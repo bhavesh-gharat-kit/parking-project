@@ -10,14 +10,14 @@
 import type { NextRequest } from 'next/server';
 
 import { buildDashboardSummary } from '@/lib/admin/dashboard';
-import { requireRole } from '@/lib/auth/guard';
+import { requireAdmin } from '@/lib/auth/guard';
 import { ok } from '@/lib/http';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 export async function GET(req: NextRequest) {
-  const auth = await requireRole(req, 'ADMIN');
+  const auth = await requireAdmin(req);
   if (!auth.ok) return auth.response;
 
   const summary = await buildDashboardSummary();

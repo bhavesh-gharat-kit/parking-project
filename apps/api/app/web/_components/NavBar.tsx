@@ -33,11 +33,20 @@ const ADMIN_LINKS: NavLink[] = [
 type NavBarProps = {
   variant: 'customer' | 'admin';
   userEmail: string;
+  /** Adds the "Admins" link — admin-account management is super-admin only. */
+  isSuperAdmin?: boolean;
 };
 
-export function NavBar({ variant, userEmail }: NavBarProps) {
+export function NavBar({ variant, userEmail, isSuperAdmin }: NavBarProps) {
   const pathname = usePathname();
-  const links = variant === 'customer' ? CUSTOMER_LINKS : ADMIN_LINKS;
+  const adminLinks = isSuperAdmin
+    ? [
+        ...ADMIN_LINKS.slice(0, -1),
+        { href: '/web/admin/admins', label: 'Admins' },
+        ...ADMIN_LINKS.slice(-1),
+      ]
+    : ADMIN_LINKS;
+  const links = variant === 'customer' ? CUSTOMER_LINKS : adminLinks;
   const brandHref = variant === 'customer' ? '/web/customer' : '/web/admin';
 
   // `InstallBanner` (mounted globally in app/web/layout.tsx) already captures

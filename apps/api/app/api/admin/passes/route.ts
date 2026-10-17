@@ -18,7 +18,7 @@ import type { NextRequest } from 'next/server';
 
 import { AdminPassListQuerySchema, type AdminPass, type Paginated } from '@parking/shared';
 
-import { requireRole } from '@/lib/auth/guard';
+import { requireAdmin } from '@/lib/auth/guard';
 import { prisma } from '@/lib/db';
 import { failValidation, ok } from '@/lib/http';
 import { PASS_ADMIN_RELATIONS, toAdminPassBooking } from '@/lib/passes/projection';
@@ -27,7 +27,7 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 export async function GET(req: NextRequest) {
-  const auth = await requireRole(req, 'ADMIN');
+  const auth = await requireAdmin(req);
   if (!auth.ok) return auth.response;
 
   const query = AdminPassListQuerySchema.safeParse(Object.fromEntries(req.nextUrl.searchParams));

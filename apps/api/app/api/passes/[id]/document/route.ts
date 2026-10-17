@@ -13,7 +13,7 @@
  */
 import type { NextRequest } from 'next/server';
 
-import { isPassDocumentEligible, type PassDocument } from '@parking/shared';
+import { isAdminRole, isPassDocumentEligible, type PassDocument } from '@parking/shared';
 
 import { requireUser } from '@/lib/auth/guard';
 import { prisma } from '@/lib/db';
@@ -33,7 +33,7 @@ export async function GET(req: NextRequest, { params }: RouteContext) {
   // Same "not found, not forbidden" rule as every other pass route: another
   // customer's pass id reads as 404 and learns the caller nothing. An admin
   // is the one caller allowed past the ownership filter.
-  const where = auth.actor.role === 'ADMIN' ? { id } : { id, userId: auth.actor.userId };
+  const where = isAdminRole(auth.actor.role) ? { id } : { id, userId: auth.actor.userId };
 
   const passBooking = await prisma.passBooking.findFirst({
     where,

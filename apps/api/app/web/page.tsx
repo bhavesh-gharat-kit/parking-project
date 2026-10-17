@@ -1,5 +1,7 @@
 import { redirect } from 'next/navigation';
 
+import { isAdminRole } from '@parking/shared';
+
 import { auth } from '@/auth';
 
 /**
@@ -13,5 +15,5 @@ export default async function WebIndexPage() {
   const session = await auth();
 
   if (!session?.user) redirect('/web/sign-in');
-  redirect(session.user.role === 'ADMIN' ? '/web/admin' : '/web/customer');
+  redirect(isAdminRole(session.user.role) ? '/web/admin' : '/web/customer');
 }

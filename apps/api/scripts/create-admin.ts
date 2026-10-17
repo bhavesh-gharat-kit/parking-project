@@ -1,5 +1,5 @@
 /**
- * Creates or promotes an ADMIN account — the ONLY way an admin comes into
+ * Creates or promotes an ADMIN (or, with --super, SUPER_ADMIN) account — the ONLY way an admin comes into
  * existence (context.txt §4, §110-112).
  *
  *   npm run admin:create -w api -- --email you@example.com --name "Your Name"
@@ -39,10 +39,14 @@ type Args = {
   name?: string;
   phone?: string;
   password?: string;
+  super: boolean;
 };
 
 function parseArgs(argv: string[]): Args {
   const flags = new Map<string, string>();
+  // Boolean flag; strip it before the key/value parser sees it.
+  const isSuper = argv.includes('--super');
+  argv = argv.filter((arg) => arg !== '--super');
 
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i];
@@ -62,7 +66,7 @@ function parseArgs(argv: string[]): Args {
   const email = flags.get('email');
   if (!email) {
     throw new Error(
-      'Usage: npm run admin:create -w api -- --email you@example.com [--name "Your Name"] [--phone 9876543210] [--password "..."]',
+      'Usage: npm run admin:create -w api -- --email you@example.com [--name "Your Name"] [--phone 9876543210] [--password "..."] [--super]',
     );
   }
 
@@ -76,6 +80,7 @@ function parseArgs(argv: string[]): Args {
     name: flags.get('name'),
     phone: flags.get('phone'),
     password: flags.get('password'),
+    super: isSuper,
   };
 }
 
@@ -99,7 +104,7 @@ async function main() {
       const updated = await prisma.user.update({
         where: { id: existing.id },
         data: {
-          role: 'ADMIN',
+          role: args.super ? 'SUPER_ADMIN' : 'ADMIN',
           isActive: true,
           ...(args.name ? { name: args.name } : {}),
           ...(args.phone ? { phone: args.phone } : {}),
@@ -109,7 +114,7 @@ async function main() {
         },
       });
 
-      console.log(`Promoted ${updated.email} to ADMIN (id ${updated.id}).`);
+      console.log(`Promoted ${updated.email} to ${updated.role} (id ${updated.id}).`);
       if (args.password) console.log('Password was reset to the value you supplied.');
       else if (!updated.passwordHash) {
         console.log(
@@ -125,7 +130,7 @@ async function main() {
         email: args.email,
         name: args.name ?? 'Administrator',
         phone: args.phone ?? null,
-        role: 'ADMIN',
+        role: args.super ? 'SUPER_ADMIN' : 'ADMIN',
         passwordHash: await hashPassword(password),
         // Nothing verifies an admin's mailbox; whoever ran this command is the
         // verification.
@@ -133,7 +138,7 @@ async function main() {
       },
     });
 
-    console.log(`Created ADMIN ${created.email} (id ${created.id}).`);
+    console.log(`Created ${created.role} ${created.email} (id ${created.id}).`);
     if (!args.password) {
       console.log('');
       console.log('  Generated password (shown once — store it in a password manager):');

@@ -8,7 +8,7 @@
  */
 import type { NextRequest } from 'next/server';
 
-import { requireRole } from '@/lib/auth/guard';
+import { requireAdmin } from '@/lib/auth/guard';
 import { ADMIN_BOOKING_RELATIONS, toAdminBooking } from '@/lib/bookings/projection';
 import { prisma } from '@/lib/db';
 import { fail, ok } from '@/lib/http';
@@ -19,7 +19,7 @@ export const dynamic = 'force-dynamic';
 type RouteContext = { params: Promise<{ id: string }> };
 
 export async function GET(req: NextRequest, { params }: RouteContext) {
-  const auth = await requireRole(req, 'ADMIN');
+  const auth = await requireAdmin(req);
   if (!auth.ok) return auth.response;
 
   const { id } = await params;

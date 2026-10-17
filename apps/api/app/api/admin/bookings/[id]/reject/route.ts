@@ -15,7 +15,7 @@ import type { NextRequest } from 'next/server';
 
 import { AdminBookingRejectRequestSchema } from '@parking/shared';
 
-import { requireRole } from '@/lib/auth/guard';
+import { requireAdmin } from '@/lib/auth/guard';
 import { parseJsonBody } from '@/lib/auth/route-helpers';
 import { ADMIN_BOOKING_RELATIONS, toAdminBooking } from '@/lib/bookings/projection';
 import { transitionBooking, transitionFailureMessage } from '@/lib/bookings/transitions';
@@ -29,7 +29,7 @@ export const dynamic = 'force-dynamic';
 type RouteContext = { params: Promise<{ id: string }> };
 
 export async function POST(req: NextRequest, { params }: RouteContext) {
-  const auth = await requireRole(req, 'ADMIN');
+  const auth = await requireAdmin(req);
   if (!auth.ok) return auth.response;
 
   const body = await parseJsonBody(req, AdminBookingRejectRequestSchema);

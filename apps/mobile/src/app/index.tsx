@@ -16,6 +16,8 @@
  */
 import { Redirect } from 'expo-router';
 
+import { isAdminRole } from '@parking/shared';
+
 import { useAuthStore } from '@/stores/auth-store';
 
 export default function IndexScreen() {
@@ -26,5 +28,5 @@ export default function IndexScreen() {
 
   if (status === 'signedOut') return <Redirect href="/sign-in" />;
 
-  return <Redirect href={role === 'ADMIN' ? '/admin' : '/customer'} />;
+  return <Redirect href={isAdminRole(role) ? '/admin' : '/customer'} />;
 }

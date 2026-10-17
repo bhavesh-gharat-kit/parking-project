@@ -11,7 +11,7 @@ import { z } from 'zod';
 
 import { PassPlanRequestSchema, type AdminPassPlan } from '@parking/shared';
 
-import { requireRole } from '@/lib/auth/guard';
+import { requireAdmin } from '@/lib/auth/guard';
 import { parseJsonBody } from '@/lib/auth/route-helpers';
 import { prisma } from '@/lib/db';
 import { fail, failValidation, ok } from '@/lib/http';
@@ -35,7 +35,7 @@ function isUniqueViolation(error: unknown): boolean {
 const QuerySchema = z.object({ locationId: z.string().min(1, 'locationId is required') });
 
 export async function GET(req: NextRequest) {
-  const auth = await requireRole(req, 'ADMIN');
+  const auth = await requireAdmin(req);
   if (!auth.ok) return auth.response;
 
   const query = QuerySchema.safeParse(Object.fromEntries(req.nextUrl.searchParams));
@@ -54,7 +54,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const auth = await requireRole(req, 'ADMIN');
+  const auth = await requireAdmin(req);
   if (!auth.ok) return auth.response;
 
   const body = await parseJsonBody(req, PassPlanRequestSchema);

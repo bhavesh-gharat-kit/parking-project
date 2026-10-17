@@ -15,9 +15,19 @@ import { z } from 'zod';
 /* ────────────────────────────── Identity ────────────────────────────── */
 
 /** context.txt §4, §19 — assigned by the backend, never selectable by a client. */
-export const USER_ROLES = ['USER', 'ADMIN'] as const;
+export const USER_ROLES = ['USER', 'ADMIN', 'SUPER_ADMIN'] as const;
 export type UserRole = (typeof USER_ROLES)[number];
 export const UserRoleSchema = z.enum(USER_ROLES);
+
+/** Staff accounts — everything under `/admin` is open to both. */
+export function isAdminRole(role: UserRole | null | undefined): boolean {
+  return role === 'ADMIN' || role === 'SUPER_ADMIN';
+}
+
+/** Admin-account management is the one area reserved for the super admin. */
+export function isSuperAdminRole(role: UserRole | null | undefined): boolean {
+  return role === 'SUPER_ADMIN';
+}
 
 /* ────────────────────────────── Vehicles ────────────────────────────── */
 

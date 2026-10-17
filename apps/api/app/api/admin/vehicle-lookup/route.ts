@@ -20,7 +20,7 @@ import {
   type VehicleLookupState,
 } from '@parking/shared';
 
-import { requireRole } from '@/lib/auth/guard';
+import { requireAdmin } from '@/lib/auth/guard';
 import { prisma } from '@/lib/db';
 import { failValidation, ok } from '@/lib/http';
 
@@ -38,7 +38,7 @@ function classify(now: Date, startsAt: Date, endsAt: Date): VehicleLookupState {
 }
 
 export async function GET(req: NextRequest) {
-  const auth = await requireRole(req, 'ADMIN');
+  const auth = await requireAdmin(req);
   if (!auth.ok) return auth.response;
 
   const parsed = VehicleLookupQuerySchema.safeParse(Object.fromEntries(req.nextUrl.searchParams));

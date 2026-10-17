@@ -3,7 +3,7 @@ import type { NextRequest } from 'next/server';
 
 import { ComplaintCategoryRequestSchema, type ComplaintCategory } from '@parking/shared';
 
-import { requireRole } from '@/lib/auth/guard';
+import { requireAdmin } from '@/lib/auth/guard';
 import { parseJsonBody } from '@/lib/auth/route-helpers';
 import { toComplaintCategory } from '@/lib/complaints';
 import { prisma } from '@/lib/db';
@@ -13,7 +13,7 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 export async function GET(req: NextRequest) {
-  const auth = await requireRole(req, 'ADMIN');
+  const auth = await requireAdmin(req);
   if (!auth.ok) return auth.response;
 
   const rows = await prisma.complaintCategory.findMany({ orderBy: [{ sortOrder: 'asc' }, { title: 'asc' }] });
@@ -22,7 +22,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const auth = await requireRole(req, 'ADMIN');
+  const auth = await requireAdmin(req);
   if (!auth.ok) return auth.response;
 
   const body = await parseJsonBody(req, ComplaintCategoryRequestSchema);

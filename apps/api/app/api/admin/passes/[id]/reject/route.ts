@@ -13,7 +13,7 @@ import type { NextRequest } from 'next/server';
 
 import { AdminPassRejectRequestSchema } from '@parking/shared';
 
-import { requireRole } from '@/lib/auth/guard';
+import { requireAdmin } from '@/lib/auth/guard';
 import { parseJsonBody } from '@/lib/auth/route-helpers';
 import { prisma } from '@/lib/db';
 import { fail, ok } from '@/lib/http';
@@ -26,7 +26,7 @@ export const dynamic = 'force-dynamic';
 type RouteContext = { params: Promise<{ id: string }> };
 
 export async function POST(req: NextRequest, { params }: RouteContext) {
-  const auth = await requireRole(req, 'ADMIN');
+  const auth = await requireAdmin(req);
   if (!auth.ok) return auth.response;
 
   const body = await parseJsonBody(req, AdminPassRejectRequestSchema);

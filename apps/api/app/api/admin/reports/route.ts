@@ -12,14 +12,14 @@ import type { NextRequest } from 'next/server';
 import { AdminReportQuerySchema } from '@parking/shared';
 
 import { buildReport } from '@/lib/admin/dashboard';
-import { requireRole } from '@/lib/auth/guard';
+import { requireAdmin } from '@/lib/auth/guard';
 import { failValidation, ok } from '@/lib/http';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 export async function GET(req: NextRequest) {
-  const auth = await requireRole(req, 'ADMIN');
+  const auth = await requireAdmin(req);
   if (!auth.ok) return auth.response;
 
   const query = AdminReportQuerySchema.safeParse(Object.fromEntries(req.nextUrl.searchParams));

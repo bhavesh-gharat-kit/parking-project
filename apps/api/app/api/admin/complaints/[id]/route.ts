@@ -6,7 +6,7 @@ import type { NextRequest } from 'next/server';
 
 import { ComplaintAdminUpdateRequestSchema } from '@parking/shared';
 
-import { requireRole } from '@/lib/auth/guard';
+import { requireAdmin } from '@/lib/auth/guard';
 import { parseJsonBody } from '@/lib/auth/route-helpers';
 import { COMPLAINT_TRANSITIONS, complaintInclude, formatTicket, toAdminComplaint } from '@/lib/complaints';
 import { prisma } from '@/lib/db';
@@ -20,7 +20,7 @@ export const dynamic = 'force-dynamic';
 type RouteContext = { params: Promise<{ id: string }> };
 
 export async function GET(req: NextRequest, { params }: RouteContext) {
-  const auth = await requireRole(req, 'ADMIN');
+  const auth = await requireAdmin(req);
   if (!auth.ok) return auth.response;
 
   const { id } = await params;
@@ -31,7 +31,7 @@ export async function GET(req: NextRequest, { params }: RouteContext) {
 }
 
 export async function PATCH(req: NextRequest, { params }: RouteContext) {
-  const auth = await requireRole(req, 'ADMIN');
+  const auth = await requireAdmin(req);
   if (!auth.ok) return auth.response;
 
   const body = await parseJsonBody(req, ComplaintAdminUpdateRequestSchema);

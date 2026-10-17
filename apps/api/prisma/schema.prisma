@@ -46,6 +46,8 @@ datasource db {
 enum UserRole {
   USER
   ADMIN
+  /// Everything an ADMIN can do, plus managing the admin accounts themselves.
+  SUPER_ADMIN
 }
 
 /// A customer or an admin. One table for both — the same Android binary serves
@@ -1143,4 +1145,27 @@ model AppSetting {
   value String @db.Text
 
   updatedAt DateTime @updatedAt
+}
+
+/// Record of admin-account management (create / block / unblock / delete /
+/// password reset / role change). Deliberately has NO foreign keys: admins can be
+/// hard-deleted, and this log must still say who did what to whom afterwards, so
+/// the people involved are stored as snapshots.
+model AdminAuditEvent {
+  id String @id @default(cuid())
+
+  actorId    String?
+  actorEmail String  @db.VarChar(254)
+
+  targetId    String?
+  targetEmail String  @db.VarChar(254)
+
+  /// CREATED | BLOCKED | UNBLOCKED | DELETED | PASSWORD_RESET | UPDATED
+  action String  @db.VarChar(32)
+  note   String? @db.Text
+
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([targetId])
 }

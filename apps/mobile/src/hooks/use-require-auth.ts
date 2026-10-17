@@ -17,7 +17,7 @@
 import { router } from 'expo-router';
 import { useEffect } from 'react';
 
-import type { UserRole } from '@parking/shared';
+import { isAdminRole, type UserRole } from '@parking/shared';
 
 import { useAuthStore } from '@/stores/auth-store';
 
@@ -26,7 +26,7 @@ export function useRequireAuth(role?: UserRole): boolean {
   const actualRole = useAuthStore((state) => state.user?.role);
 
   const signedOut = status === 'signedOut';
-  const wrongRole = status === 'signedIn' && role !== undefined && actualRole !== role;
+  const wrongRole = status === 'signedIn' && role !== undefined && !(role === 'ADMIN' ? isAdminRole(actualRole) : actualRole === role);
 
   useEffect(() => {
     // Redirecting from an effect rather than returning `<Redirect>`: this runs from
