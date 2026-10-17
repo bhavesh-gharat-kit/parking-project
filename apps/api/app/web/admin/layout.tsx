@@ -4,6 +4,7 @@ import type { ReactNode } from 'react';
 import { auth } from '@/auth';
 
 import { NavBar } from '../_components/NavBar';
+import { VehicleLookup } from '../_components/VehicleLookup';
 
 /**
  * Gate: `ADMIN` role, same convenience-only guard as the mobile admin stack
@@ -20,6 +21,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
     <>
       <NavBar variant="admin" userEmail={session.user.email ?? ''} />
       <main className="web-shell">{children}</main>
+      <VehicleLookup />
     </>
   );
 }

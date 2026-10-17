@@ -16,3 +16,4 @@ export * from './push';
 export * from './passes';
 export * from './pass-document';
 export * from './complaints';
+export * from './vehicle-lookup';
