@@ -13,9 +13,15 @@ export async function nextPassSequence(
   locationId: string,
   yearMonth: string,
 ): Promise<number> {
+  // `LAST_INSERT_ID(1)` on the insert path (not a plain `1`): the table has no
+  // AUTO_INCREMENT column, so on a fresh row — the first pass of a (location,
+  // month) — a plain INSERT would leave the session's LAST_INSERT_ID() at its
+  // previous value (0), and the `SELECT LAST_INSERT_ID()` below would read back
+  // 0 → "...-0000". Seeding it to 1 makes the first pass number end in 0001,
+  // matching the ON DUPLICATE KEY UPDATE branch.
   await tx.$executeRaw`
     INSERT INTO PassMonthlySequence (locationId, yearMonth, lastValue)
-    VALUES (${locationId}, ${yearMonth}, 1)
+    VALUES (${locationId}, ${yearMonth}, LAST_INSERT_ID(1))
     ON DUPLICATE KEY UPDATE lastValue = LAST_INSERT_ID(lastValue + 1)
   `;
 

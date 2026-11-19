@@ -10,7 +10,7 @@
  * That is the point of the split. Two implementations of "is this password right"
  * is how one of them ends up missing the `isActive` check.
  */
-import type { SessionUser } from '@parking/shared';
+import { IndianPhoneSchema, type SessionUser } from '@parking/shared';
 
 import type { User } from '@/generated/prisma/client';
 import { prisma } from '@/lib/db';
@@ -118,6 +118,83 @@ export async function authenticateWithPassword(
   }
 
   return touchLastLogin(user);
+}
+
+/* ─────────────── Email-OR-mobile / password sign-in (web) ───────────── */
+
+/**
+ * Sign-in by either an email address or an Indian mobile number, plus password.
+ * The website's credentials provider uses this so a customer who created their
+ * account through the simplified pass flow (which keys the account on their
+ * phone, `findOrCreatePassHolder` below) can log in with that number, while
+ * email sign-in keeps working unchanged.
+ *
+ * The mobile app's `POST /api/auth/login` deliberately still calls
+ * `authenticateWithPassword` (email only) — its request contract is unchanged.
+ *
+ * Phone is not unique in the schema (a family may share a number), so the lookup
+ * takes the oldest account with that number that actually has a password. In
+ * practice pass-flow accounts are one-per-number because `findOrCreatePassHolder`
+ * refuses to make a second.
+ */
+export async function authenticateWithIdentifier(
+  identifier: string,
+  password: string,
+): Promise<User> {
+  const trimmed = identifier.trim();
+
+  let user: User | null = null;
+  if (trimmed.includes('@')) {
+    user = await prisma.user.findUnique({ where: { email: trimmed.toLowerCase() } });
+  } else {
+    const phone = IndianPhoneSchema.safeParse(trimmed);
+    if (phone.success) {
+      user = await prisma.user.findFirst({
+        where: { phone: phone.data, passwordHash: { not: null } },
+        orderBy: { createdAt: 'asc' },
+      });
+    }
+  }
+
+  // Same constant-time reasoning as `authenticateWithPassword`.
+  const passwordMatches = await verifyPassword(password, user?.passwordHash);
+  if (!user || !passwordMatches) {
+    throw new AuthFailure('UNAUTHORIZED', INVALID_CREDENTIALS_MESSAGE);
+  }
+  if (!user.isActive) {
+    throw new AuthFailure('FORBIDDEN', ACCOUNT_DISABLED_MESSAGE);
+  }
+
+  return touchLastLogin(user);
+}
+
+/**
+ * The simplified pass flow's step 1: make sure an account exists for this mobile
+ * number. If one already does, it is left untouched (the caller then signs in
+ * with the supplied password, which succeeds only if it is the right one). If
+ * not, a new `USER` account is created, keyed on the phone with a synthesized
+ * email — these customers never type an email, but `User.email` is required and
+ * unique, so one is derived from the number.
+ */
+export async function findOrCreatePassHolder(input: {
+  name: string;
+  phone: string;
+  password: string;
+}): Promise<{ created: boolean }> {
+  const existing = await prisma.user.findFirst({
+    where: { phone: input.phone },
+    orderBy: { createdAt: 'asc' },
+    select: { id: true },
+  });
+  if (existing) return { created: false };
+
+  await registerWithPassword({
+    name: input.name,
+    email: `${input.phone}@phone.local`,
+    phone: input.phone,
+    password: input.password,
+  });
+  return { created: true };
 }
 
 /* ────────────────────────── Google sign-in ─────────────────────────── */

@@ -1,0 +1,288 @@
+/* ──────────────────────────────────────────────────────────────────────────
+   Pass portal design system. Self-contained — nothing here leans on the old
+   monorepo's web.css. Mobile-first, one accent, calm and trustworthy.
+   ────────────────────────────────────────────────────────────────────────── */
+.portal {
+  --accent: #0b5fa5;
+  --accent-dark: #084a82;
+  --accent-soft: #e8f1fa;
+  --ink: #16202b;
+  --ink-soft: #5b6b7a;
+  --line: #e2e8f0;
+  --surface: #ffffff;
+  --bg: #f4f7fb;
+  --ok: #1a7f52;
+  --ok-soft: #e4f4ec;
+  --warn: #a9690a;
+  --warn-soft: #fbf0db;
+  --bad: #b3261e;
+  --bad-soft: #fbe6e5;
+  --radius: 14px;
+  --shadow: 0 1px 2px rgba(16, 32, 43, 0.06), 0 8px 24px rgba(16, 32, 43, 0.06);
+
+  min-height: 100dvh;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  line-height: 1.5;
+}
+
+.pp-container {
+  width: 100%;
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 20px 16px 48px;
+}
+
+/* Header / brand */
+.pp-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
+}
+.pp-header .pp-mark {
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  background: var(--accent);
+  color: #fff;
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+  font-size: 15px;
+}
+.pp-header .pp-title {
+  font-size: 15px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+.pp-header .pp-sub {
+  font-size: 12px;
+  color: var(--ink-soft);
+}
+
+/* Typography */
+.pp-h1 {
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin: 8px 0 6px;
+}
+.pp-lead {
+  color: var(--ink-soft);
+  font-size: 15px;
+  margin: 0 0 20px;
+}
+.pp-h2 {
+  font-size: 17px;
+  font-weight: 650;
+  margin: 0 0 14px;
+}
+.pp-muted { color: var(--ink-soft); }
+.pp-small { font-size: 13px; }
+
+/* Card */
+.pp-card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 20px;
+}
+.pp-card + .pp-card { margin-top: 14px; }
+
+/* Buttons */
+.pp-btn {
+  appearance: none;
+  border: 1px solid transparent;
+  border-radius: 11px;
+  padding: 13px 18px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, opacity 0.15s;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  text-decoration: none;
+}
+.pp-btn-primary { background: var(--accent); color: #fff; }
+.pp-btn-primary:hover { background: var(--accent-dark); }
+.pp-btn-ghost { background: transparent; color: var(--accent); border-color: var(--line); }
+.pp-btn-ghost:hover { background: var(--accent-soft); }
+.pp-btn-block { width: 100%; }
+.pp-btn:disabled { opacity: 0.55; cursor: not-allowed; }
+
+/* Fields */
+.pp-field { margin-bottom: 16px; }
+.pp-label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+.pp-input {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  padding: 12px 13px;
+  font-size: 16px; /* >=16 avoids iOS zoom-on-focus */
+  color: var(--ink);
+  background: #fff;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.pp-input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+.pp-input::placeholder { color: #9aa7b4; }
+.pp-error { color: var(--bad); font-size: 13px; margin-top: 6px; }
+
+/* Segmented control (pass type) */
+.pp-segmented {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  background: #eef2f7;
+  border-radius: 12px;
+  padding: 4px;
+}
+.pp-seg {
+  appearance: none;
+  border: none;
+  background: transparent;
+  border-radius: 9px;
+  padding: 10px 6px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink-soft);
+  cursor: pointer;
+}
+.pp-seg[aria-pressed='true'] {
+  background: #fff;
+  color: var(--accent);
+  box-shadow: var(--shadow);
+}
+
+/* Option cards (duration / plan) */
+.pp-options { display: grid; gap: 10px; }
+.pp-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border: 1.5px solid var(--line);
+  border-radius: 12px;
+  padding: 14px;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+.pp-option:hover { border-color: #cdd9e6; }
+.pp-option[data-selected='true'] {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+.pp-option .pp-opt-label { font-weight: 600; font-size: 15px; }
+.pp-option .pp-opt-sub { font-size: 12.5px; color: var(--ink-soft); }
+.pp-option .pp-opt-price { font-weight: 700; font-size: 16px; color: var(--accent-dark); }
+
+/* Badges */
+.pp-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 650;
+  padding: 4px 10px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+.pp-badge-ok { background: var(--ok-soft); color: var(--ok); }
+.pp-badge-warn { background: var(--warn-soft); color: var(--warn); }
+.pp-badge-bad { background: var(--bad-soft); color: var(--bad); }
+.pp-badge-neutral { background: #eef2f7; color: var(--ink-soft); }
+.pp-dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+
+/* Key/value rows */
+.pp-kv { display: flex; justify-content: space-between; gap: 14px; padding: 7px 0; font-size: 14px; }
+.pp-kv + .pp-kv { border-top: 1px solid var(--line); }
+.pp-kv .k { color: var(--ink-soft); }
+.pp-kv .v { font-weight: 600; text-align: right; }
+
+/* Alerts */
+.pp-alert { border-radius: 11px; padding: 12px 14px; font-size: 14px; margin-bottom: 16px; }
+.pp-alert-bad { background: var(--bad-soft); color: var(--bad); }
+.pp-alert-info { background: var(--accent-soft); color: var(--accent-dark); }
+.pp-alert-ok { background: var(--ok-soft); color: var(--ok); }
+
+/* QR */
+.pp-qr {
+  display: block;
+  width: 220px;
+  max-width: 100%;
+  height: auto;
+  margin: 4px auto 12px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: #fff;
+}
+
+/* File input */
+.pp-file {
+  border: 1.5px dashed var(--line);
+  border-radius: 12px;
+  padding: 16px;
+  text-align: center;
+  color: var(--ink-soft);
+  font-size: 14px;
+  cursor: pointer;
+  display: block;
+}
+.pp-file input { display: none; }
+.pp-file[data-has='true'] { border-color: var(--accent); color: var(--accent-dark); background: var(--accent-soft); }
+.pp-thumb { max-width: 160px; border-radius: 10px; margin: 10px auto 0; display: block; }
+
+/* Hero (landing) */
+.pp-hero { text-align: center; padding: 22px 4px 8px; }
+.pp-hero .pp-badge { margin-bottom: 14px; }
+.pp-actions { display: grid; gap: 12px; margin-top: 22px; }
+
+/* Links */
+.pp-link { color: var(--accent); font-weight: 600; text-decoration: none; }
+.pp-link:hover { text-decoration: underline; }
+.pp-center { text-align: center; }
+.pp-mt { margin-top: 18px; }
+
+/* Spinner */
+.pp-spinner {
+  width: 18px; height: 18px; border-radius: 50%;
+  border: 2.5px solid rgba(255, 255, 255, 0.4);
+  border-top-color: #fff;
+  animation: pp-spin 0.7s linear infinite;
+}
+.pp-spinner-ink { border-color: var(--accent-soft); border-top-color: var(--accent); }
+@keyframes pp-spin { to { transform: rotate(360deg); } }
+.pp-loading { display: grid; place-items: center; gap: 12px; padding: 48px 0; color: var(--ink-soft); }
+
+/* Modal */
+.pp-overlay {
+  position: fixed; inset: 0; z-index: 50;
+  background: rgba(16, 32, 43, 0.5);
+  display: grid; place-items: end center;
+  padding: 16px;
+}
+@media (min-width: 520px) { .pp-overlay { place-items: center; } }
+.pp-modal {
+  background: var(--surface);
+  border-radius: 16px;
+  padding: 22px;
+  width: 100%;
+  max-width: 440px;
+  box-shadow: 0 20px 60px rgba(16, 32, 43, 0.3);
+}
+.pp-card-list { display: grid; gap: 14px; }

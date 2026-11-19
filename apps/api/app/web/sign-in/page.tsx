@@ -1,16 +1,12 @@
 'use client';
 
 import { signIn } from 'next-auth/react';
-import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState, type FormEvent } from 'react';
 
-import { LoginRequestSchema } from '@parking/shared';
-
-import { Banner } from '../_components/Banner';
-import { Field } from '../_components/Field';
-import { safeParseForm, type FieldErrors } from '../_lib/validation';
+import type { FieldErrors } from '../_lib/validation';
+import '../_lib/portal-theme.css';
 
 const EMPTY = { email: '', password: '' };
 
@@ -25,9 +21,11 @@ export default function SignInPage() {
     event.preventDefault();
     setFormError(null);
 
-    const parsed = safeParseForm(LoginRequestSchema, values);
-    if (!parsed.ok) {
-      setFieldErrors(parsed.errors);
+    const errors: FieldErrors = {};
+    if (!values.email.trim()) errors.email = 'Enter your email or mobile number';
+    if (!values.password) errors.password = 'Enter your password';
+    if (Object.keys(errors).length) {
+      setFieldErrors(errors);
       return;
     }
     setFieldErrors({});
@@ -35,13 +33,14 @@ export default function SignInPage() {
 
     try {
       const result = await signIn('credentials', {
-        email: parsed.data.email,
-        password: parsed.data.password,
+        // The provider accepts an email address or a mobile number here.
+        email: values.email.trim(),
+        password: values.password,
         redirect: false,
       });
 
       if (!result || result.error) {
-        setFormError('Incorrect email or password.');
+        setFormError('Incorrect email/mobile or password.');
         return;
       }
 
@@ -53,66 +52,67 @@ export default function SignInPage() {
   };
 
   return (
-    <main className="auth-shell">
-      <div className="auth-brand">
-        <Image
-          src="/brand/ke-logo.png"
-          alt="Pay & Park logo"
-          width={480}
-          height={387}
-          className="auth-brand-logo"
-          priority
-        />
-        <span className="auth-brand-text">Pay &amp; Park</span>
-      </div>
+    <div className="portal">
+      <header className="pp-header">
+        <span className="pp-mark">P</span>
+        <div>
+          <div className="pp-title">Kumar Enterprises — Parking</div>
+          <div className="pp-sub">Kalyan · Two-Wheeler Pass</div>
+        </div>
+      </header>
 
-      <div className="auth-header">
-        <h1 className="text-heading">Welcome back</h1>
-        <p className="text-small text-secondary">Sign in to book parking and see your bookings.</p>
-      </div>
+      <main className="pp-container">
+        <h1 className="pp-h1">Log in</h1>
+        <p className="pp-lead">Enter your email or mobile number and password.</p>
 
-      {formError ? <Banner kind="danger">{formError}</Banner> : null}
+        {formError ? <div className="pp-alert pp-alert-bad">{formError}</div> : null}
 
-      <form className="stack" onSubmit={onSubmit}>
-        <Field label="Email" htmlFor="email" error={fieldErrors.email}>
-          <input
-            id="email"
-            type="email"
-            className={`input${fieldErrors.email ? ' has-error' : ''}`}
-            placeholder="you@example.com"
-            autoComplete="email"
-            value={values.email}
-            onChange={(event) => setValues((current) => ({ ...current, email: event.target.value }))}
-          />
-        </Field>
+        <form onSubmit={onSubmit} noValidate>
+          <div className="pp-card">
+            <div className="pp-field">
+              <label className="pp-label" htmlFor="email">Email or mobile number</label>
+              <input
+                id="email"
+                type="text"
+                className="pp-input"
+                placeholder="you@example.com or 10-digit mobile"
+                autoComplete="username"
+                value={values.email}
+                onChange={(event) => setValues((current) => ({ ...current, email: event.target.value }))}
+              />
+              {fieldErrors.email && <p className="pp-error">{fieldErrors.email}</p>}
+            </div>
 
-        <Field label="Password" htmlFor="password" error={fieldErrors.password}>
-          <input
-            id="password"
-            type="password"
-            className={`input${fieldErrors.password ? ' has-error' : ''}`}
-            placeholder="Your password"
-            autoComplete="current-password"
-            value={values.password}
-            onChange={(event) => setValues((current) => ({ ...current, password: event.target.value }))}
-          />
-        </Field>
+            <div className="pp-field" style={{ marginBottom: 0 }}>
+              <label className="pp-label" htmlFor="password">Password</label>
+              <input
+                id="password"
+                type="password"
+                className="pp-input"
+                placeholder="Your password"
+                autoComplete="current-password"
+                value={values.password}
+                onChange={(event) => setValues((current) => ({ ...current, password: event.target.value }))}
+              />
+              {fieldErrors.password && <p className="pp-error">{fieldErrors.password}</p>}
+            </div>
+          </div>
 
-        <button type="submit" className="btn btn-primary btn-block" disabled={submitting}>
-          {submitting ? 'Signing in…' : 'Sign in'}
-        </button>
-      </form>
+          <div className="pp-mt">
+            <button type="submit" className="pp-btn pp-btn-primary pp-btn-block" disabled={submitting}>
+              {submitting ? 'Signing in…' : 'Log in'}
+            </button>
+          </div>
+        </form>
 
-      <Link href="/web/forgot-password" className="text-small text-primary text-center">
-        Forgot your password?
-      </Link>
+        <p className="pp-center pp-mt">
+          <Link href="/web/forgot-password" className="pp-link pp-small">Forgot your password?</Link>
+        </p>
 
-      <div className="auth-footer">
-        <span className="text-small text-secondary">New here?</span>
-        <Link href="/web/sign-up" className="text-small text-primary">
-          Create an account
-        </Link>
-      </div>
-    </main>
+        <p className="pp-small pp-muted pp-center pp-mt">
+          New here? <Link href="/web/pass" className="pp-link">Apply for a pass</Link>
+        </p>
+      </main>
+    </div>
   );
 }

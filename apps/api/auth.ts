@@ -43,7 +43,7 @@ import {
   SESSION_COOKIE_SECURE,
   SESSION_MAX_AGE_SECONDS,
 } from '@/lib/auth/session';
-import { authenticateWithGoogle, authenticateWithPassword } from '@/lib/auth/users';
+import { authenticateWithGoogle, authenticateWithIdentifier } from '@/lib/auth/users';
 import { env } from '@/lib/env';
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
@@ -81,18 +81,21 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   providers: [
     Credentials({
       id: 'credentials',
-      name: 'Email and password',
+      name: 'Email or mobile and password',
       credentials: {
-        email: { label: 'Email', type: 'email' },
+        // Kept keyed `email` for wire compatibility with the existing sign-in
+        // form, but the value may be an email address OR an Indian mobile
+        // number — `authenticateWithIdentifier` decides which.
+        email: { label: 'Email or mobile number', type: 'text' },
         password: { label: 'Password', type: 'password' },
       },
       async authorize(credentials) {
-        const email = typeof credentials?.email === 'string' ? credentials.email : '';
+        const identifier = typeof credentials?.email === 'string' ? credentials.email : '';
         const password = typeof credentials?.password === 'string' ? credentials.password : '';
-        if (!email || !password) return null;
+        if (!identifier || !password) return null;
 
         try {
-          const user = await authenticateWithPassword(email.trim().toLowerCase(), password);
+          const user = await authenticateWithIdentifier(identifier.trim(), password);
           return {
             id: user.id,
             email: user.email,
