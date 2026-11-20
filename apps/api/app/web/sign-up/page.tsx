@@ -12,6 +12,7 @@ import { Banner } from '../_components/Banner';
 import { Field } from '../_components/Field';
 import { apiRequest } from '../_lib/api';
 import { applyApiError, safeParseForm, type FieldErrors } from '../_lib/validation';
+import { PasswordInput } from '../_components/PasswordInput';
 
 const EMPTY = { name: '', email: '', phone: '', password: '' };
 
@@ -130,9 +131,8 @@ export default function SignUpPage() {
         </Field>
 
         <Field label="Password" htmlFor="password" error={fieldErrors.password}>
-          <input
+          <PasswordInput
             id="password"
-            type="password"
             className={`input${fieldErrors.password ? ' has-error' : ''}`}
             placeholder="At least 8 characters"
             autoComplete="new-password"

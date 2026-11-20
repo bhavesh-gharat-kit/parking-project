@@ -12,6 +12,7 @@ import { apiRequest } from '../_lib/api';
 import { applyApiError, safeParseForm, type FieldErrors } from '../_lib/validation';
 import { Banner } from './Banner';
 import { Field } from './Field';
+import { PasswordInput } from './PasswordInput';
 
 const EMPTY = { currentPassword: '', newPassword: '', confirmNewPassword: '' };
 
@@ -66,9 +67,8 @@ export function ChangePasswordCard() {
 
       <form className="stack" onSubmit={onSubmit}>
         <Field label="Current password" htmlFor="currentPassword" error={fieldErrors.currentPassword}>
-          <input
+          <PasswordInput
             id="currentPassword"
-            type="password"
             className={`input${fieldErrors.currentPassword ? ' has-error' : ''}`}
             autoComplete="current-password"
             value={values.currentPassword}
@@ -77,9 +77,8 @@ export function ChangePasswordCard() {
         </Field>
 
         <Field label="New password" htmlFor="newPassword" error={fieldErrors.newPassword}>
-          <input
+          <PasswordInput
             id="newPassword"
-            type="password"
             className={`input${fieldErrors.newPassword ? ' has-error' : ''}`}
             placeholder="At least 8 characters"
             autoComplete="new-password"
@@ -89,9 +88,8 @@ export function ChangePasswordCard() {
         </Field>
 
         <Field label="Confirm new password" htmlFor="confirmNewPassword" error={fieldErrors.confirmNewPassword}>
-          <input
+          <PasswordInput
             id="confirmNewPassword"
-            type="password"
             className={`input${fieldErrors.confirmNewPassword ? ' has-error' : ''}`}
             autoComplete="new-password"
             value={values.confirmNewPassword}

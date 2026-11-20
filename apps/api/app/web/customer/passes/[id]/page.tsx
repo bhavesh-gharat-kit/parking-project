@@ -13,11 +13,13 @@ import {
   formatCountdown,
   formatInr,
   formatIstDate,
+  isPassAddressMissing,
   isPassExpired,
   type PassBooking,
 } from '@parking/shared';
 
 import { Banner } from '../../../_components/Banner';
+import { PassDetailsCard } from '../../../_components/PassDetailsCard';
 import { PassStatusPill } from '../../../_components/Pill';
 import { apiRequest, errorMessage } from '../../../_lib/api';
 
@@ -84,7 +86,8 @@ export default function PassSummaryPage() {
 
   const rows: Row[] = [
     { label: 'Location', value: `${passBooking.location.name}, ${passBooking.location.city}` },
-    { label: 'Address', value: passBooking.location.addressLine },
+    { label: 'Parking location', value: passBooking.location.addressLine },
+    { label: 'Your address', value: isPassAddressMissing(passBooking.address) ? 'Not added yet' : passBooking.address },
     { label: 'Vehicle number', value: passBooking.vehicleNumber },
     {
       label: 'Vehicle category',
@@ -143,6 +146,8 @@ export default function PassSummaryPage() {
           </div>
         ))}
       </div>
+
+      <PassDetailsCard pass={passBooking} onSaved={setPassBooking} />
 
       {passBooking.status === 'PENDING' ? (
         <Link href={`/web/customer/passes/${passBooking.id}/payment`} className="btn btn-primary btn-block">

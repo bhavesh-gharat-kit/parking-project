@@ -7,6 +7,7 @@ import { useState, type FormEvent } from 'react';
 
 import type { FieldErrors } from '../_lib/validation';
 import '../_lib/portal-theme.css';
+import { PasswordInput } from '../_components/PasswordInput';
 
 const EMPTY = { email: '', password: '' };
 
@@ -86,9 +87,8 @@ export default function SignInPage() {
 
             <div className="pp-field" style={{ marginBottom: 0 }}>
               <label className="pp-label" htmlFor="password">Password</label>
-              <input
+              <PasswordInput
                 id="password"
-                type="password"
                 className="pp-input"
                 placeholder="Your password"
                 autoComplete="current-password"

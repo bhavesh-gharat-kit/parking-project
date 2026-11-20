@@ -17,6 +17,7 @@ import {
 
 import { apiRequest, errorMessage, WebApiError } from '../_lib/api';
 import '../_lib/portal-theme.css';
+import { PasswordInput } from '../_components/PasswordInput';
 
 const SHIFTS: ShiftType[] = ['DAY', 'NIGHT', 'BOTH'];
 
@@ -277,10 +278,9 @@ export default function PassApplyPage() {
               </div>
               <div className="pp-field" style={{ marginBottom: 0 }}>
                 <label className="pp-label" htmlFor="password">Password</label>
-                <input
+                <PasswordInput
                   id="password"
                   className="pp-input"
-                  type="password"
                   autoComplete="current-password"
                   value={details.password}
                   onChange={(e) => setField('password', e.target.value)}

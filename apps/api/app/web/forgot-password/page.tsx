@@ -17,6 +17,7 @@ import { Banner } from '../_components/Banner';
 import { Field } from '../_components/Field';
 import { apiRequest } from '../_lib/api';
 import { applyApiError, safeParseForm, type FieldErrors } from '../_lib/validation';
+import { PasswordInput } from '../_components/PasswordInput';
 
 const EMPTY_RESET = { otp: '', newPassword: '', confirmNewPassword: '' };
 
@@ -218,9 +219,8 @@ export default function ForgotPasswordPage() {
             </Field>
 
             <Field label="New password" htmlFor="newPassword" error={resetErrors.newPassword}>
-              <input
+              <PasswordInput
                 id="newPassword"
-                type="password"
                 className={`input${resetErrors.newPassword ? ' has-error' : ''}`}
                 placeholder="At least 8 characters"
                 autoComplete="new-password"
@@ -236,9 +236,8 @@ export default function ForgotPasswordPage() {
               htmlFor="confirmNewPassword"
               error={resetErrors.confirmNewPassword}
             >
-              <input
+              <PasswordInput
                 id="confirmNewPassword"
-                type="password"
                 className={`input${resetErrors.confirmNewPassword ? ' has-error' : ''}`}
                 autoComplete="new-password"
                 value={resetValues.confirmNewPassword}

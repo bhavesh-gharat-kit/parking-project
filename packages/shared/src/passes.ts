@@ -382,6 +382,45 @@ export const PassCreateRequestSchema = z.object({
 export type PassCreateRequest = z.input<typeof PassCreateRequestSchema>;
 export type PassCreateRequestParsed = z.output<typeof PassCreateRequestSchema>;
 
+/**
+ * `PATCH /api/passes/:id` — web-only "complete your pass details" (Phase 23).
+ * Deliberately NOT a partial of `PassCreateRequestSchema`: nothing here can touch
+ * pricing, plan, vehicle, dates or the admin-only `specification`/`entrySide`.
+ *
+ * Which fields apply depends on status, decided server-side
+ * (`passDetailsEditScope`): `address` stays editable after approval because it is
+ * printed on the pass; the informational fields only until it is `CONFIRMED`.
+ */
+export const PassDetailsUpdateRequestSchema = z.object({
+  address: PassCreateRequestSchema.shape.address,
+  occupationCategory: OptionalPassOccupationCategorySchema,
+  occupationOther: PassCreateRequestSchema.shape.occupationOther,
+  holidayOffDay: OptionalPassHolidayOffDaySchema,
+  holidayOffDayOther: PassCreateRequestSchema.shape.holidayOffDayOther,
+  helmet: z.boolean().default(false),
+  locker: z.boolean().default(false),
+  airCheck: z.boolean().default(false),
+  rickshawParking: z.boolean().default(false),
+  expectedParkingDays: PassCreateRequestSchema.shape.expectedParkingDays,
+  entryTime: OptionalTimeSchema,
+  exitTime: OptionalTimeSchema,
+});
+export type PassDetailsUpdateRequest = z.input<typeof PassDetailsUpdateRequestSchema>;
+export type PassDetailsUpdateRequestParsed = z.output<typeof PassDetailsUpdateRequestSchema>;
+
+/** What a customer may still edit on their own pass. */
+export function passDetailsEditScope(status: PassBookingStatus): 'all' | 'address' | 'none' {
+  if (status === 'CANCELLED' || status === 'REJECTED') return 'none';
+  return status === 'CONFIRMED' ? 'address' : 'all';
+}
+
+/** The pass flow files `'—'` when no address was collected. */
+export const PASS_ADDRESS_PLACEHOLDER = '—';
+export function isPassAddressMissing(address: string | null | undefined): boolean {
+  const trimmed = (address ?? '').trim();
+  return trimmed === '' || trimmed === PASS_ADDRESS_PLACEHOLDER;
+}
+
 /* ═════════════════════════════ Pass responses ═════════════════════════════ */
 
 /** The money side of a pass application — mirrors `BookingPaymentSchema`. */
