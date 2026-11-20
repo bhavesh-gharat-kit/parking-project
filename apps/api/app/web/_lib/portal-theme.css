@@ -1,25 +1,10 @@
 /* ──────────────────────────────────────────────────────────────────────────
-   Pass portal design system. Self-contained — nothing here leans on the old
-   monorepo's web.css. Mobile-first, one accent, calm and trustworthy.
+   Pass portal (`pp-*`) classes for /web/pass and /web/sign-in. The palette,
+   radius and shadow tokens are NOT defined here — they come from the :root
+   block in web.css (via the --accent/--ink/--line aliases), so the whole web
+   app shares one look. Mobile-first, one accent, calm and trustworthy.
    ────────────────────────────────────────────────────────────────────────── */
 .portal {
-  --accent: #0b5fa5;
-  --accent-dark: #084a82;
-  --accent-soft: #e8f1fa;
-  --ink: #16202b;
-  --ink-soft: #5b6b7a;
-  --line: #e2e8f0;
-  --surface: #ffffff;
-  --bg: #f4f7fb;
-  --ok: #1a7f52;
-  --ok-soft: #e4f4ec;
-  --warn: #a9690a;
-  --warn-soft: #fbf0db;
-  --bad: #b3261e;
-  --bad-soft: #fbe6e5;
-  --radius: 14px;
-  --shadow: 0 1px 2px rgba(16, 32, 43, 0.06), 0 8px 24px rgba(16, 32, 43, 0.06);
-
   min-height: 100dvh;
   background: var(--bg);
   color: var(--ink);

@@ -5,6 +5,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
+import { PROFILE_REMINDER_DISMISSED_KEY } from './CompleteProfileModal';
 import { promptPwaInstall } from '../_lib/pwa-install';
 import { usePwaInstall } from '../_lib/use-pwa-install';
 
@@ -13,8 +14,6 @@ type NavLink = { href: string; label: string };
 const CUSTOMER_LINKS: NavLink[] = [
   { href: '/web/customer', label: 'Home' },
   { href: '/web/customer/passes', label: 'My passes' },
-  { href: '/web/customer/book', label: 'Book parking' },
-  { href: '/web/customer/vehicles', label: 'My vehicles' },
   { href: '/web/customer/complaints', label: 'Complaints' },
   { href: '/web/customer/profile', label: 'Profile' },
 ];
@@ -74,9 +73,8 @@ export function NavBar({ variant, userEmail, isSuperAdmin }: NavBarProps) {
 
         <div className="web-nav-links">
           {links.map((link) => {
-            // `startsWith` alone would also light up "Book parking" for a
-            // `/web/customer/bookings/...` path, since "bookings" starts with
-            // "book" — require the next character to be a path separator.
+            // Require a path separator after the prefix so a sibling route that
+            // merely shares a prefix doesn't light up the wrong link.
             const active =
               link.href === brandHref
                 ? pathname === brandHref
@@ -103,7 +101,14 @@ export function NavBar({ variant, userEmail, isSuperAdmin }: NavBarProps) {
           <button
             type="button"
             className="btn btn-ghost"
-            onClick={() => void signOut({ callbackUrl: '/web/sign-in' })}
+            onClick={() => {
+              try {
+                window.sessionStorage.removeItem(PROFILE_REMINDER_DISMISSED_KEY);
+              } catch {
+                /* ignore */
+              }
+              void signOut({ callbackUrl: '/web/sign-in' });
+            }}
           >
             Sign out
           </button>

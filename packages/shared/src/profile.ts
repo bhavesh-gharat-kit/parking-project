@@ -8,7 +8,7 @@
 import { z } from 'zod';
 
 import { SessionUserSchema } from './auth';
-import { OptionalIndianPhoneSchema } from './schemas';
+import { EmailSchema, OptionalIndianPhoneSchema } from './schemas';
 
 /** `PATCH /api/profile`. */
 export const UpdateProfileRequestSchema = z.object({
@@ -44,3 +44,39 @@ export type ProfileResponse = z.infer<typeof ProfileResponseSchema>;
 /** `POST /api/profile/change-password` — nothing to return but "it worked". */
 export const ChangePasswordResponseSchema = z.object({ changed: z.literal(true) });
 export type ChangePasswordResponse = z.infer<typeof ChangePasswordResponseSchema>;
+
+/* ───────────── Profile completeness (web-only reminder, Phase 23) ───────────── */
+
+/**
+ * Accounts created by the simplified pass flow have no real email; one is
+ * synthesized as `<phone>@phone.local` (`findOrCreatePassHolder`).
+ */
+export const PLACEHOLDER_EMAIL_SUFFIX = '@phone.local';
+
+export function isPlaceholderEmail(email: string | null | undefined): boolean {
+  return !!email && email.trim().toLowerCase().endsWith(PLACEHOLDER_EMAIL_SUFFIX);
+}
+
+/**
+ * What a customer still needs to fill in. Decision: a profile is incomplete when
+ * the email is the placeholder or the name is blank. Phone is not checked — pass
+ * accounts always have one. Callers scope this to `role === 'USER'`.
+ */
+export function getProfileGaps(user: { email: string; name: string | null }): {
+  email: boolean;
+  name: boolean;
+} {
+  return { email: isPlaceholderEmail(user.email), name: !user.name?.trim() };
+}
+
+export function isProfileIncomplete(user: { email: string; name: string | null }): boolean {
+  const gaps = getProfileGaps(user);
+  return gaps.email || gaps.name;
+}
+
+/**
+ * `POST /api/profile/email` — web-only, deliberately separate from
+ * `UpdateProfileRequestSchema` so the mobile profile contract is untouched.
+ */
+export const SetEmailRequestSchema = z.object({ email: EmailSchema });
+export type SetEmailRequest = z.input<typeof SetEmailRequestSchema>;
