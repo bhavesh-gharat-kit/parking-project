@@ -220,7 +220,8 @@ export default function PassApplyPage() {
   return (
     <div className="portal">
       <header className="pp-header">
-        <span className="pp-mark">P</span>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/brand/ke-logo-sm.png" alt="Kumar Enterprises" className="pp-logo" />
         <div>
           <div className="pp-title">Kumar Enterprises — Parking</div>
           <div className="pp-sub">Kalyan · Two-Wheeler Pass</div>

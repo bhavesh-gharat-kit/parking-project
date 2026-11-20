@@ -54,6 +54,11 @@
   font-weight: 700;
   font-size: 15px;
 }
+.pp-header .pp-logo {
+  height: 38px;
+  width: auto;
+  display: block;
+}
 .pp-header .pp-title {
   font-size: 15px;
   font-weight: 650;
