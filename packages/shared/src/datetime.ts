@@ -119,6 +119,23 @@ export function istDayBounds(dateStamp: string): { start: Date; end: Date } {
 }
 
 /**
+ * The IST calendar month (or whole year, when `month` is omitted) as inclusive
+ * `[start, end]` instants — first IST midnight to last IST millisecond. Used by
+ * the admin passes month/year filter, which asks "was this pass valid at any
+ * point in this period", i.e. `startDate <= end && endDate >= start`.
+ */
+export function istMonthRange(year: number, month?: number): { start: Date; end: Date } {
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const firstMonth = month ?? 1;
+  const lastMonth = month ?? 12;
+  const lastDay = new Date(Date.UTC(year, lastMonth, 0)).getUTCDate();
+  return {
+    start: istDayBounds(`${year}-${pad(firstMonth)}-01`).start,
+    end: istDayBounds(`${year}-${pad(lastMonth)}-${pad(lastDay)}`).end,
+  };
+}
+
+/**
  * `9:58` — a countdown for the §15 expiry window, floored at zero.
  *
  * Floored rather than allowed to go negative because the sweep runs on a timer:

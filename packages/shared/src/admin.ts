@@ -153,6 +153,17 @@ export const AdminPassListQuerySchema = PaginationQuerySchema.extend({
   /** Matches against pass number, vehicle number, or the customer's name/email. */
   search: z.string().trim().min(1).max(100).optional(),
   userId: CuidSchema.optional(),
+  /**
+   * Month/year filter on pass VALIDITY: a pass matches when its
+   * `startDate`..`endDate` window overlaps the chosen period, so a 3-month pass
+   * shows under each of its months. `year` alone means the whole year; `month`
+   * without `year` is rejected.
+   */
+  year: z.coerce.number().int().min(2000).max(2100).optional(),
+  month: z.coerce.number().int().min(1).max(12).optional(),
+}).refine((value) => value.month === undefined || value.year !== undefined, {
+  message: 'Choose a year to filter by month',
+  path: ['year'],
 });
 export type AdminPassListQuery = z.infer<typeof AdminPassListQuerySchema>;
 

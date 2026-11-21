@@ -16,7 +16,12 @@
  */
 import type { NextRequest } from 'next/server';
 
-import { AdminPassListQuerySchema, type AdminPass, type Paginated } from '@parking/shared';
+import {
+  AdminPassListQuerySchema,
+  istMonthRange,
+  type AdminPass,
+  type Paginated,
+} from '@parking/shared';
 
 import { requireAdmin } from '@/lib/auth/guard';
 import { prisma } from '@/lib/db';
@@ -33,13 +38,17 @@ export async function GET(req: NextRequest) {
   const query = AdminPassListQuerySchema.safeParse(Object.fromEntries(req.nextUrl.searchParams));
   if (!query.success) return failValidation(query.error);
 
-  const { page, pageSize, status, paymentMethod, locationId, search, userId } = query.data;
+  const { page, pageSize, status, paymentMethod, locationId, search, userId, year, month } = query.data;
+
+  // Overlap, not containment: valid at any point in the period.
+  const period = year ? istMonthRange(year, month) : null;
 
   const where = {
     ...(userId ? { userId } : {}),
     ...(status ? { status } : {}),
     ...(paymentMethod ? { paymentMethod } : {}),
     ...(locationId ? { locationId } : {}),
+    ...(period ? { startDate: { lte: period.end }, endDate: { gte: period.start } } : {}),
     ...(search
       ? {
           OR: [

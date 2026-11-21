@@ -20,6 +20,14 @@ import { usePagination } from '../../_lib/use-pagination';
 
 type QueueFilter = 'ALL' | PassBookingStatus;
 
+const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+
+/** Current year ±: a few past years for history, one ahead for advance passes. */
+const YEARS = (() => {
+  const now = new Date().getFullYear();
+  return Array.from({ length: 6 }, (_, i) => now + 1 - i);
+})();
+
 const FILTERS: { value: QueueFilter; label: string }[] = [
   { value: 'PAYMENT_VERIFICATION', label: 'UPI verification' },
   { value: 'PENDING_APPROVAL', label: 'Cash approval' },
@@ -58,6 +66,8 @@ export default function AdminPassesPage() {
   const [filter, setFilter] = useState<QueueFilter>('PAYMENT_VERIFICATION');
   const [searchInput, setSearchInput] = useState('');
   const [search, setSearch] = useState('');
+  const [year, setYear] = useState('');
+  const [month, setMonth] = useState('');
   const [passes, setPasses] = useState<AdminPass[] | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [total, setTotal] = useState(0);
@@ -73,6 +83,8 @@ export default function AdminPassesPage() {
       const params = new URLSearchParams();
       if (filter !== 'ALL') params.set('status', filter);
       if (search) params.set('search', search);
+      if (year) params.set('year', year);
+      if (year && month) params.set('month', month);
       params.set('page', String(page));
       params.set('pageSize', String(pageSize));
 
@@ -85,7 +97,7 @@ export default function AdminPassesPage() {
     } finally {
       if (isCurrent(requestId)) setLoading(false);
     }
-  }, [filter, search, page, pageSize, begin, isCurrent]);
+  }, [filter, search, year, month, page, pageSize, begin, isCurrent]);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch-on-filter-change; the callback is stable via useCallback
@@ -127,6 +139,56 @@ export default function AdminPassesPage() {
           Search
         </button>
       </form>
+
+      <div className="filter-row">
+        <select
+          className="select"
+          aria-label="Year"
+          value={year}
+          onChange={(event) => {
+            setYear(event.target.value);
+            if (!event.target.value) setMonth('');
+            resetPage();
+          }}
+        >
+          <option value="">All years</option>
+          {YEARS.map((y) => (
+            <option key={y} value={y}>
+              {y}
+            </option>
+          ))}
+        </select>
+        <select
+          className="select"
+          aria-label="Month"
+          value={month}
+          disabled={!year}
+          onChange={(event) => {
+            setMonth(event.target.value);
+            resetPage();
+          }}
+        >
+          <option value="">All months</option>
+          {MONTHS.map((name, index) => (
+            <option key={name} value={index + 1}>
+              {name}
+            </option>
+          ))}
+        </select>
+        {year ? (
+          <button
+            type="button"
+            className="btn btn-ghost"
+            onClick={() => {
+              setYear('');
+              setMonth('');
+              resetPage();
+            }}
+          >
+            Clear dates
+          </button>
+        ) : null}
+      </div>
 
       <div className="chip-row">
         {FILTERS.map((item) => (
