@@ -13,8 +13,10 @@ import {
 } from '@parking/shared';
 
 import { Banner } from '../../_components/Banner';
+import { Pagination } from '../../_components/Pagination';
 import { ComplaintStatusPill } from '../../_components/Pill';
 import { apiRequest, errorMessage } from '../../_lib/api';
+import { usePagination } from '../../_lib/use-pagination';
 
 export default function AdminComplaintsPage() {
   const [status, setStatus] = useState<ComplaintStatus | ''>('');
@@ -22,19 +24,28 @@ export default function AdminComplaintsPage() {
   const [search, setSearch] = useState('');
   const [complaints, setComplaints] = useState<AdminComplaint[] | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [total, setTotal] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const { page, pageSize, setPage, changePageSize, resetPage, begin, isCurrent } = usePagination(20);
 
   const load = useCallback(async () => {
+    const requestId = begin();
+    setLoading(true);
     setLoadError(null);
     try {
-      const params = new URLSearchParams({ pageSize: '50' });
+      const params = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
       if (status) params.set('status', status);
       if (search) params.set('search', search);
-      const page = await apiRequest<Paginated<AdminComplaint>>(`/api/admin/complaints?${params.toString()}`);
-      setComplaints(page.items);
+      const result = await apiRequest<Paginated<AdminComplaint>>(`/api/admin/complaints?${params.toString()}`);
+      if (!isCurrent(requestId)) return;
+      setComplaints(result.items);
+      setTotal(result.total);
     } catch (error) {
-      setLoadError(errorMessage(error, 'Could not load complaints.'));
+      if (isCurrent(requestId)) setLoadError(errorMessage(error, 'Could not load complaints.'));
+    } finally {
+      if (isCurrent(requestId)) setLoading(false);
     }
-  }, [status, search]);
+  }, [status, search, page, pageSize, begin, isCurrent]);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch-on-filter-change; the callback is stable via useCallback
@@ -51,7 +62,11 @@ export default function AdminComplaintsPage() {
       </div>
 
       <div className="chip-row">
-        <button type="button" className={`chip${status === '' ? ' selected' : ''}`} onClick={() => setStatus('')}>
+        <button type="button" className={`chip${status === '' ? ' selected' : ''}`} onClick={() => {
+            setStatus('');
+            resetPage();
+          }}
+        >
           All
         </button>
         {COMPLAINT_STATUSES.map((value) => (
@@ -59,7 +74,10 @@ export default function AdminComplaintsPage() {
             key={value}
             type="button"
             className={`chip${status === value ? ' selected' : ''}`}
-            onClick={() => setStatus(value)}
+            onClick={() => {
+              setStatus(value);
+              resetPage();
+            }}
           >
             {COMPLAINT_STATUS_LABELS[value]}
           </button>
@@ -71,6 +89,7 @@ export default function AdminComplaintsPage() {
         onSubmit={(event) => {
           event.preventDefault();
           setSearch(searchInput.trim());
+          resetPage();
         }}
       >
         <input
@@ -107,6 +126,15 @@ export default function AdminComplaintsPage() {
           ) : null}
         </div>
       )}
+
+      <Pagination
+        page={page}
+        pageSize={pageSize}
+        total={total}
+        onPageChange={setPage}
+        onPageSizeChange={changePageSize}
+        disabled={loading}
+      />
 
       {loadError ? <Banner kind="danger">{loadError}</Banner> : null}
     </div>

@@ -8,14 +8,19 @@
  */
 import type { NextRequest } from 'next/server';
 
-import { PassCreateRequestSchema, type PassBooking, type Paginated } from '@parking/shared';
+import {
+  PaginationQuerySchema,
+  PassCreateRequestSchema,
+  type PassBooking,
+  type Paginated,
+} from '@parking/shared';
 
 import { requireUser } from '@/lib/auth/guard';
 import { parseJsonBody } from '@/lib/auth/route-helpers';
 import { createPassBooking } from '@/lib/passes/create';
 import { PASS_RELATIONS, toPassBooking } from '@/lib/passes/projection';
 import { prisma } from '@/lib/db';
-import { fail, ok } from '@/lib/http';
+import { fail, failValidation, ok } from '@/lib/http';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -47,22 +52,32 @@ export async function GET(req: NextRequest) {
   const auth = await requireUser(req);
   if (!auth.ok) return auth.response;
 
+  // Pagination is opt-in: the Android app calls this with no query and expects
+  // the whole list in one response, so only a request that sends `page` or
+  // `pageSize` (the website) is paged.
+  const params = req.nextUrl.searchParams;
+  const paged = params.has('page') || params.has('pageSize');
+  const query = PaginationQuerySchema.safeParse(Object.fromEntries(params));
+  if (!query.success) return failValidation(query.error);
+  const { page, pageSize } = query.data;
+
   const [rows, total] = await Promise.all([
     prisma.passBooking.findMany({
       where: { userId: auth.actor.userId },
       include: PASS_RELATIONS,
       // D5 point 1 — the customer's own "my passes" list, newest first.
       orderBy: { createdAt: 'desc' },
+      ...(paged ? { skip: (page - 1) * pageSize, take: pageSize } : {}),
     }),
     prisma.passBooking.count({ where: { userId: auth.actor.userId } }),
   ]);
 
   const payload: Paginated<PassBooking> = {
     items: rows.map(toPassBooking),
-    page: 1,
-    pageSize: total,
+    page: paged ? page : 1,
+    pageSize: paged ? pageSize : total,
     total,
-    totalPages: 1,
+    totalPages: paged ? Math.max(1, Math.ceil(total / pageSize)) : 1,
   };
 
   return ok(payload, { headers: { 'Cache-Control': 'no-store' } });

@@ -13,8 +13,10 @@ import {
 } from '@parking/shared';
 
 import { Banner } from '../../_components/Banner';
+import { Pagination } from '../../_components/Pagination';
 import { PassStatusPill } from '../../_components/Pill';
 import { apiRequest, errorMessage } from '../../_lib/api';
+import { usePagination } from '../../_lib/use-pagination';
 
 type QueueFilter = 'ALL' | PassBookingStatus;
 
@@ -58,22 +60,32 @@ export default function AdminPassesPage() {
   const [search, setSearch] = useState('');
   const [passes, setPasses] = useState<AdminPass[] | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [total, setTotal] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const { page, pageSize, setPage, changePageSize, resetPage, begin, isCurrent } = usePagination(20);
   const counts = useQueueCounts();
 
   const load = useCallback(async () => {
+    const requestId = begin();
+    setLoading(true);
     setLoadError(null);
     try {
       const params = new URLSearchParams();
       if (filter !== 'ALL') params.set('status', filter);
       if (search) params.set('search', search);
-      params.set('pageSize', '50');
+      params.set('page', String(page));
+      params.set('pageSize', String(pageSize));
 
-      const page = await apiRequest<Paginated<AdminPass>>(`/api/admin/passes?${params.toString()}`);
-      setPasses(page.items);
+      const result = await apiRequest<Paginated<AdminPass>>(`/api/admin/passes?${params.toString()}`);
+      if (!isCurrent(requestId)) return;
+      setPasses(result.items);
+      setTotal(result.total);
     } catch (error) {
-      setLoadError(errorMessage(error, 'Could not load pass applications.'));
+      if (isCurrent(requestId)) setLoadError(errorMessage(error, 'Could not load pass applications.'));
+    } finally {
+      if (isCurrent(requestId)) setLoading(false);
     }
-  }, [filter, search]);
+  }, [filter, search, page, pageSize, begin, isCurrent]);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch-on-filter-change; the callback is stable via useCallback
@@ -102,6 +114,7 @@ export default function AdminPassesPage() {
         onSubmit={(event) => {
           event.preventDefault();
           setSearch(searchInput.trim());
+          resetPage();
         }}
       >
         <input
@@ -121,7 +134,10 @@ export default function AdminPassesPage() {
             key={item.value}
             type="button"
             className={`chip${filter === item.value ? ' selected' : ''}`}
-            onClick={() => setFilter(item.value)}
+            onClick={() => {
+              setFilter(item.value);
+              resetPage();
+            }}
           >
             {item.label}
           </button>
@@ -160,6 +176,15 @@ export default function AdminPassesPage() {
           {passes !== null && passes.length === 0 ? <div className="empty-state">Nothing here right now.</div> : null}
         </div>
       )}
+
+      <Pagination
+        page={page}
+        pageSize={pageSize}
+        total={total}
+        onPageChange={setPage}
+        onPageSizeChange={changePageSize}
+        disabled={loading}
+      />
 
       {loadError ? <Banner kind="danger">{loadError}</Banner> : null}
     </div>

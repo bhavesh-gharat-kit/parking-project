@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 import {
   PAYMENT_STATUS_LABELS,
@@ -13,30 +13,42 @@ import {
 } from '@parking/shared';
 
 import { Banner } from '../../_components/Banner';
+import { Pagination } from '../../_components/Pagination';
 import { PassStatusPill } from '../../_components/Pill';
 import { apiRequest, errorMessage } from '../../_lib/api';
+import { usePagination } from '../../_lib/use-pagination';
 
 export default function PassesListPage() {
   const [passes, setPasses] = useState<PassBooking[] | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [total, setTotal] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const { page, pageSize, setPage, changePageSize, begin, isCurrent } = usePagination(10);
+
+  const load = useCallback(async () => {
+    const requestId = begin();
+    setLoading(true);
+    setLoadError(null);
+    try {
+      const result = await apiRequest<Paginated<PassBooking>>(`/api/passes?page=${page}&pageSize=${pageSize}`);
+      if (!isCurrent(requestId)) return;
+      setPasses(result.items);
+      setTotal(result.total);
+    } catch (error) {
+      if (isCurrent(requestId)) setLoadError(errorMessage(error, 'Could not load your passes.'));
+    } finally {
+      if (isCurrent(requestId)) setLoading(false);
+    }
+  }, [page, pageSize, begin, isCurrent]);
 
   useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const page = await apiRequest<Paginated<PassBooking>>('/api/passes');
-        if (!cancelled) setPasses(page.items);
-      } catch (error) {
-        if (!cancelled) setLoadError(errorMessage(error, 'Could not load your passes.'));
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch-on-page-change; the callback is stable via useCallback
+    void load();
+  }, [load]);
 
   // D5 point 3 — "active" vs. "past" is always this read-time comparison
-  // against `endDate`, never a stored status.
+  // against `endDate`, never a stored status. Grouping applies within the
+  // current page (newest first), since pages are cut by creation date.
   const active = (passes ?? []).filter((pass) => !isPassExpired(pass.endDate));
   const past = (passes ?? []).filter((pass) => isPassExpired(pass.endDate));
 
@@ -74,6 +86,15 @@ export default function PassesListPage() {
           ) : null}
         </>
       )}
+
+      <Pagination
+        page={page}
+        pageSize={pageSize}
+        total={total}
+        onPageChange={setPage}
+        onPageSizeChange={changePageSize}
+        disabled={loading}
+      />
 
       {loadError ? <Banner kind="danger">{loadError}</Banner> : null}
     </div>

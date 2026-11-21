@@ -11,8 +11,10 @@ import {
 
 import { Banner } from '../../_components/Banner';
 import { Field } from '../../_components/Field';
+import { Pagination } from '../../_components/Pagination';
 import { Pill } from '../../_components/Pill';
 import { apiRequest, errorMessage } from '../../_lib/api';
+import { usePagination } from '../../_lib/use-pagination';
 
 type ListResponse = Paginated<AdminAccount> & { auditEvents: AdminAuditEvent[] };
 
@@ -28,15 +30,28 @@ export default function AdminAccountsPage() {
   const [form, setForm] = useState(EMPTY_FORM);
   const [formError, setFormError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const { page, pageSize, setPage, changePageSize, resetPage, begin, isCurrent } = usePagination(10);
 
   const load = useCallback(async () => {
+    const requestId = begin();
+    setLoading(true);
     setLoadError(null);
     try {
-      setData(await apiRequest<ListResponse>('/api/admin/admins?pageSize=100'));
+      const result = await apiRequest<ListResponse>(`/api/admin/admins?page=${page}&pageSize=${pageSize}`);
+      if (!isCurrent(requestId)) return;
+      // Deleting the last admin on the last page leaves it empty — step back one.
+      if (result.items.length === 0 && page > 1) {
+        resetPage();
+        return;
+      }
+      setData(result);
     } catch (error) {
-      setLoadError(errorMessage(error, 'Could not load admins.'));
+      if (isCurrent(requestId)) setLoadError(errorMessage(error, 'Could not load admins.'));
+    } finally {
+      if (isCurrent(requestId)) setLoading(false);
     }
-  }, []);
+  }, [page, pageSize, begin, isCurrent, resetPage]);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch-on-mount; reloads call the same stable callback outside an effect
@@ -180,6 +195,16 @@ export default function AdminAccountsPage() {
           ))}
         </div>
       )}
+
+      <Pagination
+        page={page}
+        pageSize={pageSize}
+        total={data?.total ?? 0}
+        onPageChange={setPage}
+        onPageSizeChange={changePageSize}
+        pageSizeOptions={[10, 20, 50]}
+        disabled={loading}
+      />
 
       <p className="text-small-bold">Account activity log</p>
       <div className="stack">

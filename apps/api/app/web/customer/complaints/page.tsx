@@ -6,22 +6,33 @@ import { useCallback, useEffect, useState } from 'react';
 import { formatIstDate, type Complaint, type Paginated } from '@parking/shared';
 
 import { Banner } from '../../_components/Banner';
+import { Pagination } from '../../_components/Pagination';
 import { ComplaintStatusPill } from '../../_components/Pill';
 import { apiRequest, errorMessage } from '../../_lib/api';
+import { usePagination } from '../../_lib/use-pagination';
 
 export default function MyComplaintsPage() {
   const [complaints, setComplaints] = useState<Complaint[] | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [total, setTotal] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const { page, pageSize, setPage, changePageSize, begin, isCurrent } = usePagination(10);
 
   const load = useCallback(async () => {
+    const requestId = begin();
+    setLoading(true);
     setLoadError(null);
     try {
-      const page = await apiRequest<Paginated<Complaint>>('/api/complaints?pageSize=50');
-      setComplaints(page.items);
+      const result = await apiRequest<Paginated<Complaint>>(`/api/complaints?page=${page}&pageSize=${pageSize}`);
+      if (!isCurrent(requestId)) return;
+      setComplaints(result.items);
+      setTotal(result.total);
     } catch (error) {
-      setLoadError(errorMessage(error, 'Could not load your complaints.'));
+      if (isCurrent(requestId)) setLoadError(errorMessage(error, 'Could not load your complaints.'));
+    } finally {
+      if (isCurrent(requestId)) setLoading(false);
     }
-  }, []);
+  }, [page, pageSize, begin, isCurrent]);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch-on-mount; retry calls the same stable callback outside an effect
@@ -57,6 +68,15 @@ export default function MyComplaintsPage() {
           <div className="empty-state">You haven&apos;t raised any complaints.</div>
         ) : null}
       </div>
+
+      <Pagination
+        page={page}
+        pageSize={pageSize}
+        total={total}
+        onPageChange={setPage}
+        onPageSizeChange={changePageSize}
+        disabled={loading}
+      />
 
       {loadError ? <Banner kind="danger">{loadError}</Banner> : null}
     </div>
